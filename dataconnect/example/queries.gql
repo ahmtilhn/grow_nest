@@ -1,0 +1,123 @@
+query GetMyProfile @auth(level: USER) {
+  user(key: { id_expr: "auth.uid" }) {
+    id
+    email
+    displayName
+    avatarUrl
+    birthDate
+    phone
+    role
+    language
+    theme
+  }
+}
+
+query ListMyFamilies @auth(level: USER) {
+  families(
+    where: {
+      _or: [
+        { ownerUserId: { eq_expr: "auth.uid" } }
+        {
+          familyPartners_on_family: {
+            exist: {
+              acceptedUserId: { eq_expr: "auth.uid" }
+              status: { eq: "accepted" }
+            }
+          }
+        }
+      ]
+    }
+    limit: 5
+  ) {
+    id
+    ownerUserId
+    activeBabyId
+    createdAt
+    partners: familyPartners_on_family {
+      email
+      status
+      acceptedUserId
+      createdAt
+      respondedAt
+    }
+    babies: babies_on_family {
+      id
+      name
+      birthDate
+      gender
+      currentWeight
+      currentHeight
+      currentHeadCircumference
+      createdAt
+    }
+  }
+}
+
+query ListPendingInvitesForMe($email: String!)
+@auth(expr: "vars.email == auth.token.email") {
+  familyPartners(
+    where: { email: { eq: $email }, status: { eq: "pending" } }
+    limit: 20
+  ) {
+    familyId
+    email
+    invitedByUserId
+    status
+    createdAt
+    invitedBy {
+      displayName
+      email
+    }
+    family {
+      id
+      ownerUserId
+      activeBabyId
+    }
+  }
+}
+
+query GetMyPregnancy @auth(level: USER) {
+  pregnancies(where: { userId: { eq_expr: "auth.uid" } }, limit: 1) {
+    id
+    startDate
+    dueDate
+    status
+    birthCompletedAt
+  }
+}
+
+query ListFamilyRecords($familyId: String!)
+@auth(level: USER) {
+  trackerRecords(
+    where: {
+      familyId: { eq: $familyId }
+      deletedAt: { isNull: true }
+      family: {
+        _or: [
+          { ownerUserId: { eq_expr: "auth.uid" } }
+          {
+            familyPartners_on_family: {
+              exist: {
+                acceptedUserId: { eq_expr: "auth.uid" }
+                status: { eq: "accepted" }
+              }
+            }
+          }
+        ]
+      }
+    }
+    orderBy: [{ occurredAt: DESC }]
+    limit: 100
+  ) {
+    id
+    familyId
+    babyId
+    createdByUserId
+    type
+    title
+    value
+    note
+    occurredAt
+    updatedAt
+  }
+}

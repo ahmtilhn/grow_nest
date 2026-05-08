@@ -1,0 +1,47 @@
+{
+  "emulators": {
+    "dataconnect": {
+      "dataDir": "dataconnect/.dataconnect/pgliteData"
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions"
+  },
+  "dataconnect": {
+    "source": "dataconnect"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Grow Nest",
+        "supportEmail": "ilhanahmet246@gmail.com"
+      }
+    }
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "grownest-f4141",
+          "appId": "1:496422631569:android:4c2b1a295766193933e730",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "grownest-f4141",
+          "configurations": {
+            "android": "1:496422631569:android:4c2b1a295766193933e730",
+            "ios": "1:496422631569:ios:fb3e9d1c01da56f833e730",
+            "web": "1:496422631569:web:d00dd6cf1fad1cb333e730"
+          }
+        }
+      }
+    }
+  }
+}

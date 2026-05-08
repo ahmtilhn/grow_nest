@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "496422631569",
+    "project_id": "grownest-f4141",
+    "storage_bucket": "grownest-f4141.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:496422631569:android:4c2b1a295766193933e730",
+        "android_client_info": {
+          "package_name": "com.miniadimlar.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "496422631569-lvkjkoacb96du2me574mur2gs6vpsadi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.miniadimlar.app",
+            "certificate_hash": "b9d5546feed43af23eb07f67ca578fbc03fe33a8"
+          }
+        },
+        {
+          "client_id": "496422631569-eah7mbhs2k1qkgdbufd7v56mr3jo2j9o.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClz6tsLP_snHPhd-HdZfyMSxhMqwliwvM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "496422631569-eah7mbhs2k1qkgdbufd7v56mr3jo2j9o.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "496422631569-ag1k5kfr2g2h4la005u4ro6kuau4ke9j.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.miniadimlar.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

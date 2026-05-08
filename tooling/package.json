@@ -1,0 +1,8 @@
+{
+  "name": "grow-nest-tooling",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase": "^12.7.0"
+  }
+}

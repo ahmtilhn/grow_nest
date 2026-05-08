@@ -1,0 +1,111 @@
+# Grow Nest schema keyed by Firebase Auth UID and app generated IDs.
+
+type User @table(key: "id") {
+  id: String! @default(expr: "auth.uid")
+  email: String!
+  displayName: String
+  avatarUrl: String
+  birthDate: Timestamp
+  phone: String
+  role: String
+  language: String! @default(value: "tr")
+  theme: String! @default(value: "light")
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Family @table(key: "id") @index(fields: ["ownerUserId"]) {
+  id: String!
+  owner: User! @ref(fields: "ownerUserId", references: "id")
+  ownerUserId: String!
+  activeBabyId: String
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type FamilyPartner
+  @table(key: ["family", "email"])
+  @index(fields: ["email", "status"]) {
+  family: Family!
+  email: String!
+  invitedBy: User! @ref(fields: "invitedByUserId", references: "id")
+  invitedByUserId: String!
+  acceptedUser: User @ref(fields: "acceptedUserId", references: "id")
+  acceptedUserId: String
+  status: String! @default(value: "pending")
+  createdAt: Timestamp! @default(expr: "request.time")
+  respondedAt: Timestamp
+}
+
+type AppNotification
+  @table(key: "id")
+  @index(fields: ["userId", "createdAt"], order: [ASC, DESC]) {
+  id: String!
+  user: User! @ref(fields: "userId", references: "id")
+  userId: String!
+  type: String!
+  category: String!
+  title: String!
+  body: String!
+  payload: String
+  status: String! @default(value: "unread")
+  createdAt: Timestamp! @default(expr: "request.time")
+  readAt: Timestamp
+}
+
+type VaccineEvent @table(key: "id") @index(fields: ["babyId", "dueDate"]) {
+  id: String!
+  baby: Baby! @ref(fields: "babyId", references: "id")
+  babyId: String!
+  title: String!
+  dose: String!
+  dueDate: Timestamp!
+  status: String! @default(value: "upcoming")
+  notes: String
+  completedAt: Timestamp
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Baby @table(key: "id") @index(fields: ["familyId"]) {
+  id: String!
+  family: Family! @ref(fields: "familyId", references: "id")
+  familyId: String!
+  name: String!
+  birthDate: Timestamp!
+  gender: String
+  birthWeight: Float
+  birthHeight: Float
+  birthHeadCircumference: Float
+  currentWeight: Float
+  currentHeight: Float
+  currentHeadCircumference: Float
+  createdAt: Timestamp! @default(expr: "request.time")
+}
+
+type Pregnancy @table(key: "id") @index(fields: ["userId"]) {
+  id: String!
+  user: User! @ref(fields: "userId", references: "id")
+  userId: String!
+  startDate: Timestamp!
+  dueDate: Timestamp!
+  status: String!
+  birthCompletedAt: Timestamp
+}
+
+type TrackerRecord
+  @table(key: "id")
+  @index(fields: ["familyId", "occurredAt"], order: [ASC, DESC]) {
+  id: String!
+  family: Family @ref(fields: "familyId", references: "id")
+  familyId: String
+  baby: Baby @ref(fields: "babyId", references: "id")
+  babyId: String
+  createdBy: User @ref(fields: "createdByUserId", references: "id")
+  createdByUserId: String
+  type: String!
+  title: String!
+  value: String
+  note: String
+  occurredAt: Timestamp!
+  createdAt: Timestamp! @default(expr: "request.time")
+  updatedAt: Timestamp! @default(expr: "request.time")
+  deletedAt: Timestamp
+}

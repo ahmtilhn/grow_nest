@@ -1,0 +1,656 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // users/{uid}
+    //   id: string, immutable, must equal auth.uid
+    //   email: string, immutable, must equal auth token email
+    //   displayName: string, required
+    //   emailVerified: bool
+    //   avatarUrl, phone, role: optional string/null
+    //   verification: optional map used by email verification flow
+    //   birthDate: optional timestamp/null
+    //   language, theme: string
+    //   createdAt, updatedAt: timestamp
+    //
+    // families/{familyId}
+    //   id: string, immutable, must equal document id
+    //   ownerUserId: string, immutable, must equal auth.uid on owner writes
+    //   partnerUserIds: list of strings, max 10
+    //   activeBabyId: optional string/null
+    //   createdAt, updatedAt: timestamp
+    //
+    // babies/{babyId}
+    //   id, familyId, name: string
+    //   birthDate, createdAt, updatedAt: timestamp
+    //   gender: optional string/null
+    //   birth/current measurements: optional number/null
+    //
+    // pregnancies/{pregnancyId}
+    //   id, userId, status: string
+    //   startDate, dueDate, updatedAt: timestamp
+    //   birthCompletedAt: optional timestamp/null
+    //
+    // trackerRecords/{recordId}
+    //   id, type, title, createdByUserId: string
+    //   createdByName, updatedByUserId, updatedByName,
+    //   familyId, babyId, value, note: optional string/null
+    //   occurredAt, createdAt, updatedAt: timestamp
+    //   deletedAt: optional timestamp/null
+    //
+    // reminders/{reminderId}
+    //   id, familyId, title, category, frequency, createdByUserId: string
+    //   createdByName, updatedByUserId, updatedByName, notes: optional string/null
+    //   time, createdAt, updatedAt: timestamp
+    //   isActive: bool
+    //   deletedAt: optional timestamp/null
+    //
+    // vaccineEvents/{vaccineId}
+    //   id, babyId, title, dose, status: string
+    //   notes, updatedByUserId, updatedByName: optional string/null
+    //   dueDate, createdAt, updatedAt: timestamp
+    //   completedAt: optional timestamp/null
+    //
+    // familyInvites/{inviteId}
+    //   id: string, immutable, invite-{familyId}-{invitedEmail}
+    //   familyId, invitedEmail, invitedByUserId, invitedByName,
+    //   invitedDisplayName, roleLabel, permissions, familyOwnerUserId, status: string
+    //   acceptedUserId: optional string/null
+    //   createdAt, updatedAt: timestamp
+    //   respondedAt: optional timestamp/null
+    //
+    // notifications/{notificationId}
+    //   familyId, type, category, title, body: string
+    //   targetUserIds, readBy, seenBy: list
+    //   createdBy, payload: optional string/null
+    //   isDeleted: bool
+    //   createdAt, updatedAt: timestamp
+    //
+    // notificationTokens/{tokenId}
+    //   id, userId, token, platform: string
+    //   familyId: optional string/null
+    //   enabled: bool
+    //   updatedAt: timestamp
+    //
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function authEmail() {
+      return signedIn() && request.auth.token.email is string
+        ? request.auth.token.email
+        : '';
+    }
+
+    function hasField(data, field) {
+      return data.keys().hasAny([field]);
+    }
+
+    function validString(data, field, minLen, maxLen) {
+      return data[field] is string &&
+        data[field].size() >= minLen &&
+        data[field].size() <= maxLen;
+    }
+
+    function validOptionalString(data, field, maxLen) {
+      return !hasField(data, field) ||
+        data[field] == null ||
+        (data[field] is string && data[field].size() <= maxLen);
+    }
+
+    function validOptionalTimestamp(data, field) {
+      return !hasField(data, field) ||
+        data[field] == null ||
+        data[field] is timestamp;
+    }
+
+    function validOptionalNumber(data, field) {
+      return !hasField(data, field) ||
+        data[field] == null ||
+        data[field] is number;
+    }
+
+    function validStringList(value, maxSize) {
+      return value is list &&
+        value.size() <= maxSize;
+    }
+
+    function validPermissionList(value) {
+      return value is list &&
+        value.size() <= 25 &&
+        value.hasOnly([
+          'viewBaby', 'viewFeeding', 'viewDiaper', 'viewSleep',
+          'viewVaccines', 'viewAppointments', 'viewMemories',
+          'viewNotifications', 'viewStats', 'addFeeding', 'addDiaper',
+          'manageSleep', 'addGrowth', 'addVaccine', 'addAppointment',
+          'addMemory', 'saveArticle', 'editRecords', 'deleteRecords',
+          'inviteUsers', 'manageUserPermissions', 'removeUsers',
+          'editFamily', 'editBaby', 'deleteFamilyData'
+        ]);
+    }
+
+    function inviteId(familyId, email) {
+      return 'invite-' + familyId + '-' + email;
+    }
+
+    function familyInvitePath(familyId, email) {
+      return /databases/$(database)/documents/familyInvites/$(inviteId(familyId, email));
+    }
+
+    function invitePath(inviteDocId) {
+      return /databases/$(database)/documents/familyInvites/$(inviteDocId);
+    }
+
+    function familyPath(familyId) {
+      return /databases/$(database)/documents/families/$(familyId);
+    }
+
+    function babyPath(babyId) {
+      return /databases/$(database)/documents/babies/$(babyId);
+    }
+
+    function acceptedInviteExists(familyId) {
+      return authEmail() != '' &&
+        exists(familyInvitePath(familyId, authEmail())) &&
+        get(familyInvitePath(familyId, authEmail())).data.status == 'accepted' &&
+        get(familyInvitePath(familyId, authEmail())).data.acceptedUserId == request.auth.uid;
+    }
+
+    function acceptedInviteData(familyId) {
+      return get(familyInvitePath(familyId, authEmail())).data;
+    }
+
+    function canReadFamily(familyId) {
+      return signedIn() &&
+        exists(familyPath(familyId)) &&
+        (get(familyPath(familyId)).data.ownerUserId == request.auth.uid ||
+          acceptedInviteExists(familyId));
+    }
+
+    function isFamilyOwner(familyId) {
+      return signedIn() &&
+        exists(familyPath(familyId)) &&
+        get(familyPath(familyId)).data.ownerUserId == request.auth.uid;
+    }
+
+    function canUsePermission(familyId, permission) {
+      return isFamilyOwner(familyId) ||
+        (
+          acceptedInviteExists(familyId) &&
+          acceptedInviteData(familyId).permissions is list &&
+          acceptedInviteData(familyId).permissions.hasAny([permission])
+        );
+    }
+
+    function canManageInviteForFamily(familyId) {
+      return isFamilyOwner(familyId) ||
+        canUsePermission(familyId, 'inviteUsers') ||
+        canUsePermission(familyId, 'manageUserPermissions');
+    }
+
+    function canReadInviteNotification(data) {
+      return data.type == 'family_invite' &&
+        data.payload is string &&
+        exists(invitePath(data.payload)) &&
+        get(invitePath(data.payload)).data.familyId == data.familyId &&
+        get(invitePath(data.payload)).data.invitedEmail == authEmail() &&
+        get(invitePath(data.payload)).data.status == 'pending';
+    }
+
+    function canCreateRecordType(familyId, type) {
+      return (type == 'feeding' && canUsePermission(familyId, 'addFeeding')) ||
+        (type == 'diaper' && canUsePermission(familyId, 'addDiaper')) ||
+        (type == 'sleep' && canUsePermission(familyId, 'manageSleep')) ||
+        (type == 'growth' && canUsePermission(familyId, 'addGrowth')) ||
+        (type == 'appointment' && canUsePermission(familyId, 'addAppointment')) ||
+        (type == 'memory' && canUsePermission(familyId, 'addMemory')) ||
+        canUsePermission(familyId, 'editRecords');
+    }
+
+    function canReadBaby(babyId) {
+      return signedIn() &&
+        exists(babyPath(babyId)) &&
+        canReadFamily(get(babyPath(babyId)).data.familyId);
+    }
+
+    // ===============================================================
+    // Validators
+    // ===============================================================
+
+    function validUser(data, userId) {
+      return data.keys().hasOnly([
+          'id', 'email', 'displayName', 'avatarUrl', 'birthDate', 'phone',
+          'role', 'language', 'theme', 'emailVerified', 'verification',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.id == userId &&
+        data.email == authEmail() &&
+        validString(data, 'displayName', 1, 80) &&
+        data.emailVerified is bool &&
+        validOptionalString(data, 'avatarUrl', 500) &&
+        validOptionalTimestamp(data, 'birthDate') &&
+        validOptionalString(data, 'phone', 40) &&
+        validOptionalString(data, 'role', 40) &&
+        validString(data, 'language', 2, 8) &&
+        validString(data, 'theme', 1, 20) &&
+        (!hasField(data, 'verification') || data.verification is map) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validFamily(data, familyId) {
+      return data.keys().hasOnly([
+          'id', 'ownerUserId', 'partnerUserIds', 'activeBabyId',
+          'createdAt', 'updatedAt'
+        ]) &&
+        data.id == familyId &&
+        data.ownerUserId == request.auth.uid &&
+        validStringList(data.partnerUserIds, 10) &&
+        validOptionalString(data, 'activeBabyId', 120) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validBaby(data, babyId) {
+      return data.keys().hasOnly([
+          'id', 'familyId', 'name', 'birthDate', 'gender', 'birthWeight',
+          'birthHeight', 'birthHeadCircumference', 'currentWeight',
+          'currentHeight', 'currentHeadCircumference', 'createdAt', 'updatedAt'
+        ]) &&
+        data.id == babyId &&
+        validString(data, 'familyId', 1, 120) &&
+        validString(data, 'name', 1, 80) &&
+        data.birthDate is timestamp &&
+        validOptionalString(data, 'gender', 40) &&
+        validOptionalNumber(data, 'birthWeight') &&
+        validOptionalNumber(data, 'birthHeight') &&
+        validOptionalNumber(data, 'birthHeadCircumference') &&
+        validOptionalNumber(data, 'currentWeight') &&
+        validOptionalNumber(data, 'currentHeight') &&
+        validOptionalNumber(data, 'currentHeadCircumference') &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validPregnancy(data, pregnancyId) {
+      return data.keys().hasOnly([
+          'id', 'userId', 'startDate', 'dueDate', 'status',
+          'birthCompletedAt', 'updatedAt'
+        ]) &&
+        data.id == pregnancyId &&
+        data.userId == request.auth.uid &&
+        data.startDate is timestamp &&
+        data.dueDate is timestamp &&
+        validString(data, 'status', 1, 30) &&
+        validOptionalTimestamp(data, 'birthCompletedAt') &&
+        data.updatedAt is timestamp;
+    }
+
+    function validTrackerRecord(data, recordId) {
+      return data.keys().hasOnly([
+          'id', 'familyId', 'babyId', 'createdByUserId', 'createdByName',
+          'updatedByUserId', 'updatedByName', 'type', 'title', 'value',
+          'note', 'occurredAt', 'createdAt', 'updatedAt', 'deletedAt'
+        ]) &&
+        data.id == recordId &&
+        data.createdByUserId is string &&
+        data.createdByUserId.size() >= 1 &&
+        data.createdByUserId.size() <= 128 &&
+        validOptionalString(data, 'updatedByUserId', 128) &&
+        validOptionalString(data, 'createdByName', 80) &&
+        validOptionalString(data, 'updatedByName', 80) &&
+        validOptionalString(data, 'familyId', 120) &&
+        validOptionalString(data, 'babyId', 120) &&
+        validString(data, 'type', 1, 40) &&
+        validString(data, 'title', 1, 120) &&
+        validOptionalString(data, 'value', 200) &&
+        validOptionalString(data, 'note', 1000) &&
+        data.occurredAt is timestamp &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        validOptionalTimestamp(data, 'deletedAt');
+    }
+
+    function validReminder(data, reminderId) {
+      return data.keys().hasOnly([
+          'id', 'familyId', 'title', 'category', 'time', 'frequency',
+          'notes', 'isActive', 'createdByUserId', 'createdByName',
+          'updatedByUserId', 'updatedByName', 'createdAt', 'updatedAt',
+          'deletedAt'
+        ]) &&
+        data.id == reminderId &&
+        validString(data, 'familyId', 1, 120) &&
+        validString(data, 'title', 1, 120) &&
+        validString(data, 'category', 1, 40) &&
+        data.time is timestamp &&
+        validString(data, 'frequency', 1, 500) &&
+        validOptionalString(data, 'notes', 1000) &&
+        data.isActive is bool &&
+        data.createdByUserId is string &&
+        data.createdByUserId.size() >= 1 &&
+        data.createdByUserId.size() <= 128 &&
+        validOptionalString(data, 'createdByName', 80) &&
+        validOptionalString(data, 'updatedByUserId', 128) &&
+        validOptionalString(data, 'updatedByName', 80) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        validOptionalTimestamp(data, 'deletedAt');
+    }
+
+    function validVaccineEvent(data, vaccineId) {
+      return data.keys().hasOnly([
+          'id', 'babyId', 'title', 'dose', 'dueDate', 'status', 'notes',
+          'completedAt', 'updatedByUserId', 'updatedByName', 'createdAt',
+          'updatedAt'
+        ]) &&
+        data.id == vaccineId &&
+        validString(data, 'babyId', 1, 120) &&
+        validString(data, 'title', 1, 120) &&
+        validString(data, 'dose', 1, 80) &&
+        data.dueDate is timestamp &&
+        data.status in ['upcoming', 'completed', 'overdue'] &&
+        validOptionalString(data, 'notes', 1000) &&
+        validOptionalTimestamp(data, 'completedAt') &&
+        validOptionalString(data, 'updatedByUserId', 128) &&
+        validOptionalString(data, 'updatedByName', 80) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validInvite(data, inviteDocId) {
+      return data.keys().hasOnly([
+          'id', 'familyId', 'invitedEmail', 'invitedByUserId',
+          'invitedByName', 'invitedDisplayName', 'roleLabel', 'permissions',
+          'familyOwnerUserId', 'status', 'acceptedUserId', 'createdAt',
+          'updatedAt', 'respondedAt'
+        ]) &&
+        data.id == inviteDocId &&
+        data.id == inviteId(data.familyId, data.invitedEmail) &&
+        validString(data, 'familyId', 1, 120) &&
+        validString(data, 'invitedEmail', 3, 120) &&
+        validString(data, 'invitedByUserId', 1, 128) &&
+        validString(data, 'invitedByName', 1, 80) &&
+        validOptionalString(data, 'invitedDisplayName', 80) &&
+        validOptionalString(data, 'roleLabel', 80) &&
+        (!hasField(data, 'permissions') || validPermissionList(data.permissions)) &&
+        validString(data, 'familyOwnerUserId', 1, 128) &&
+        data.status in ['pending', 'accepted', 'declined'] &&
+        validOptionalString(data, 'acceptedUserId', 128) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp &&
+        validOptionalTimestamp(data, 'respondedAt');
+    }
+
+    function validNewInvite(data, inviteDocId) {
+      return validInvite(data, inviteDocId) &&
+        data.status == 'pending' &&
+        data.invitedByUserId == request.auth.uid &&
+        exists(familyPath(data.familyId)) &&
+        data.familyOwnerUserId == get(familyPath(data.familyId)).data.ownerUserId &&
+        canUsePermission(data.familyId, 'inviteUsers') &&
+        !hasField(data, 'acceptedUserId') &&
+        !hasField(data, 'respondedAt');
+    }
+
+    function inviteIdentityUnchanged(inviteDocId) {
+      return request.resource.data.id == resource.data.id &&
+        request.resource.data.id == inviteDocId &&
+        request.resource.data.familyId == resource.data.familyId &&
+        request.resource.data.invitedEmail == resource.data.invitedEmail &&
+        request.resource.data.invitedByUserId == resource.data.invitedByUserId &&
+        request.resource.data.familyOwnerUserId == resource.data.familyOwnerUserId &&
+        request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function validInvitePermissionUpdate(inviteDocId) {
+      return validInvite(request.resource.data, inviteDocId) &&
+        inviteIdentityUnchanged(inviteDocId) &&
+        canUsePermission(resource.data.familyId, 'manageUserPermissions') &&
+        request.resource.data.status == resource.data.status &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'invitedByName', 'invitedDisplayName', 'roleLabel', 'permissions',
+          'updatedAt'
+        ]);
+    }
+
+    function validInviteResend(inviteDocId) {
+      return validInvite(request.resource.data, inviteDocId) &&
+        inviteIdentityUnchanged(inviteDocId) &&
+        canManageInviteForFamily(resource.data.familyId) &&
+        resource.data.status in ['pending', 'declined'] &&
+        request.resource.data.status == 'pending' &&
+        !hasField(request.resource.data, 'acceptedUserId') &&
+        !hasField(request.resource.data, 'respondedAt') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'invitedByName', 'invitedDisplayName', 'roleLabel', 'permissions',
+          'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
+        ]);
+    }
+
+    function validInviteResponse(inviteDocId) {
+      return resource.data.id == inviteDocId &&
+        request.auth.token.email == resource.data.invitedEmail &&
+        resource.data.status == 'pending' &&
+        request.writeFields.hasOnly([
+          'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
+        ]) &&
+        request.resource.data.updatedAt is timestamp &&
+        (
+          (request.resource.data.status == 'accepted' &&
+            request.resource.data.acceptedUserId == request.auth.uid &&
+            request.resource.data.respondedAt is timestamp) ||
+          (request.resource.data.status == 'declined' &&
+            !hasField(request.resource.data, 'acceptedUserId') &&
+            request.resource.data.respondedAt is timestamp)
+        );
+    }
+
+    function validNotification(data, notificationId) {
+      return data.keys().hasOnly([
+          'notificationId', 'familyId', 'targetUserIds', 'createdBy', 'type',
+          'category', 'title', 'body', 'payload', 'readBy', 'seenBy',
+          'isDeleted', 'createdAt', 'updatedAt'
+        ]) &&
+        data.notificationId == notificationId &&
+        validString(data, 'familyId', 1, 120) &&
+        validStringList(data.targetUserIds, 20) &&
+        validOptionalString(data, 'createdBy', 128) &&
+        validString(data, 'type', 1, 80) &&
+        validString(data, 'category', 1, 40) &&
+        validString(data, 'title', 1, 160) &&
+        validString(data, 'body', 1, 500) &&
+        validOptionalString(data, 'payload', 200) &&
+        validStringList(data.readBy, 20) &&
+        validStringList(data.seenBy, 20) &&
+        data.isDeleted is bool &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function validNotificationToken(data, tokenId) {
+      return data.keys().hasOnly([
+          'id', 'userId', 'familyId', 'token', 'platform', 'enabled',
+          'updatedAt'
+        ]) &&
+        data.id == tokenId &&
+        data.userId == request.auth.uid &&
+        validOptionalString(data, 'familyId', 120) &&
+        validString(data, 'token', 20, 4096) &&
+        validString(data, 'platform', 1, 30) &&
+        data.enabled is bool &&
+        data.updatedAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn() &&
+        request.auth.uid == userId &&
+        validUser(request.resource.data, userId) &&
+        (!exists(/databases/$(database)/documents/users/$(userId)) ||
+          (request.resource.data.id == resource.data.id &&
+            request.resource.data.email == resource.data.email &&
+            request.resource.data.createdAt == resource.data.createdAt));
+      allow delete: if false;
+    }
+
+    match /families/{familyId} {
+      allow read: if signedIn() &&
+        (resource.data.ownerUserId == request.auth.uid ||
+          acceptedInviteExists(familyId));
+      allow create, update: if signedIn() &&
+        validFamily(request.resource.data, familyId) &&
+        (!exists(familyPath(familyId)) ||
+          (isFamilyOwner(familyId) &&
+            request.resource.data.ownerUserId == resource.data.ownerUserId &&
+            request.resource.data.createdAt == resource.data.createdAt));
+      allow delete: if false;
+    }
+
+    match /babies/{babyId} {
+      allow read: if signedIn() && canReadFamily(resource.data.familyId);
+      allow create, update: if signedIn() &&
+        validBaby(request.resource.data, babyId) &&
+        canUsePermission(request.resource.data.familyId, 'editBaby') &&
+        (!exists(/databases/$(database)/documents/babies/$(babyId)) ||
+          request.resource.data.familyId == resource.data.familyId);
+      allow delete: if false;
+    }
+
+    match /pregnancies/{pregnancyId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update: if signedIn() &&
+        validPregnancy(request.resource.data, pregnancyId) &&
+        (!exists(/databases/$(database)/documents/pregnancies/$(pregnancyId)) ||
+          (request.resource.data.userId == resource.data.userId &&
+            request.resource.data.id == resource.data.id));
+      allow delete: if false;
+    }
+
+    match /trackerRecords/{recordId} {
+      allow read: if signedIn() &&
+        (resource.data.createdByUserId == request.auth.uid ||
+          (resource.data.familyId is string && canReadFamily(resource.data.familyId)));
+      allow create: if signedIn() &&
+        validTrackerRecord(request.resource.data, recordId) &&
+        request.resource.data.createdByUserId == request.auth.uid &&
+        request.resource.data.updatedByUserId == request.auth.uid &&
+        (!hasField(request.resource.data, 'familyId') ||
+          request.resource.data.familyId == null ||
+          canCreateRecordType(
+            request.resource.data.familyId,
+            request.resource.data.type
+          ));
+      allow update: if signedIn() &&
+        validTrackerRecord(request.resource.data, recordId) &&
+        request.resource.data.updatedByUserId == request.auth.uid &&
+        request.resource.data.createdByUserId == resource.data.createdByUserId &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.familyId == resource.data.familyId &&
+        request.resource.data.babyId == resource.data.babyId &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        (
+          resource.data.createdByUserId == request.auth.uid ||
+          (resource.data.familyId is string &&
+            (
+              (
+                request.resource.data.deletedAt is timestamp &&
+                canUsePermission(resource.data.familyId, 'deleteRecords')
+              ) ||
+              canUsePermission(resource.data.familyId, 'editRecords')
+            ))
+        );
+      allow delete: if false;
+    }
+
+    match /reminders/{reminderId} {
+      allow read: if signedIn() && canReadFamily(resource.data.familyId);
+      allow create, update: if signedIn() &&
+        validReminder(request.resource.data, reminderId) &&
+        canUsePermission(request.resource.data.familyId, 'addAppointment') &&
+        request.resource.data.updatedByUserId == request.auth.uid &&
+        (!exists(/databases/$(database)/documents/reminders/$(reminderId)) ||
+          (request.resource.data.id == resource.data.id &&
+            request.resource.data.familyId == resource.data.familyId &&
+            request.resource.data.createdByUserId == resource.data.createdByUserId &&
+            request.resource.data.createdAt == resource.data.createdAt));
+      allow delete: if false;
+    }
+
+    match /vaccineEvents/{vaccineId} {
+      allow read: if signedIn() && canReadBaby(resource.data.babyId);
+      allow create, update: if signedIn() &&
+        validVaccineEvent(request.resource.data, vaccineId) &&
+        canReadBaby(request.resource.data.babyId) &&
+        canUsePermission(
+          get(babyPath(request.resource.data.babyId)).data.familyId,
+          'addVaccine'
+        ) &&
+        request.resource.data.updatedByUserId == request.auth.uid &&
+        (!exists(/databases/$(database)/documents/vaccineEvents/$(vaccineId)) ||
+          (request.resource.data.id == resource.data.id &&
+            request.resource.data.babyId == resource.data.babyId &&
+            request.resource.data.createdAt == resource.data.createdAt));
+      allow delete: if false;
+    }
+
+    match /familyInvites/{inviteDocId} {
+      allow read: if signedIn() &&
+        (resource.data.invitedByUserId == request.auth.uid ||
+          resource.data.invitedEmail == authEmail() ||
+          resource.data.acceptedUserId == request.auth.uid ||
+          isFamilyOwner(resource.data.familyId) ||
+          canUsePermission(resource.data.familyId, 'manageUserPermissions'));
+      allow create: if signedIn() &&
+        validNewInvite(request.resource.data, inviteDocId);
+      allow update: if signedIn() &&
+        (
+          validInviteResponse(inviteDocId) ||
+          validInvitePermissionUpdate(inviteDocId) ||
+          validInviteResend(inviteDocId)
+        );
+      allow delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() &&
+        resource.data.targetUserIds.hasAny([request.auth.uid]) &&
+        (canUsePermission(resource.data.familyId, 'viewNotifications') ||
+          canReadInviteNotification(resource.data));
+      allow create: if false;
+      allow update: if signedIn() &&
+        resource.data.targetUserIds.hasAny([request.auth.uid]) &&
+        (canUsePermission(resource.data.familyId, 'viewNotifications') ||
+          canReadInviteNotification(resource.data)) &&
+        validNotification(request.resource.data, notificationId) &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['readBy', 'seenBy', 'updatedAt']) &&
+        request.resource.data.readBy.hasAll(resource.data.readBy) &&
+        request.resource.data.seenBy.hasAll(resource.data.seenBy) &&
+        request.resource.data.readBy.hasAny([request.auth.uid]) &&
+        request.resource.data.seenBy.hasAny([request.auth.uid]);
+      allow delete: if false;
+    }
+
+    match /notificationTokens/{tokenId} {
+      allow read: if false;
+      allow create, update: if signedIn() &&
+        validNotificationToken(request.resource.data, tokenId);
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

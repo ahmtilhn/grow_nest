@@ -1,0 +1,175 @@
+mutation UpsertCurrentUser(
+  $email: String!
+  $displayName: String
+  $avatarUrl: String
+  $birthDate: Timestamp
+  $phone: String
+  $role: String
+  $language: String!
+  $theme: String!
+) @auth(level: USER) {
+  user_upsert(
+    data: {
+      id_expr: "auth.uid"
+      email: $email
+      displayName: $displayName
+      avatarUrl: $avatarUrl
+      birthDate: $birthDate
+      phone: $phone
+      role: $role
+      language: $language
+      theme: $theme
+    }
+  )
+}
+
+mutation UpsertFamily($id: String!, $activeBabyId: String)
+@auth(level: USER) {
+  family_upsert(
+    data: {
+      id: $id
+      ownerUserId_expr: "auth.uid"
+      activeBabyId: $activeBabyId
+    }
+  )
+}
+
+mutation AddFamilyPartner($familyId: String!, $email: String!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    family(key: { id: $familyId }) {
+      ownerUserId
+        @check(expr: "this == auth.uid", message: "Only the owner can invite partners.")
+    }
+  }
+  familyPartner_upsert(
+    data: {
+      familyId: $familyId
+      email: $email
+      invitedByUserId_expr: "auth.uid"
+      status: "pending"
+    }
+  )
+}
+
+mutation AcceptFamilyPartnerInvite($familyId: String!, $email: String!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    familyPartner(key: { familyId: $familyId, email: $email }) {
+      email
+        @check(expr: "this == auth.token.email", message: "Only the invited user can accept this invite.")
+      status
+        @check(expr: "this == 'pending'", message: "Invite is no longer pending.")
+    }
+  }
+  familyPartner_update(
+    key: { familyId: $familyId, email: $email }
+    data: {
+      status: "accepted"
+      acceptedUserId_expr: "auth.uid"
+      respondedAt_expr: "request.time"
+    }
+  )
+}
+
+mutation DeclineFamilyPartnerInvite($familyId: String!, $email: String!)
+@auth(level: USER)
+@transaction {
+  query @redact {
+    familyPartner(key: { familyId: $familyId, email: $email }) {
+      email
+        @check(expr: "this == auth.token.email", message: "Only the invited user can decline this invite.")
+      status
+        @check(expr: "this == 'pending'", message: "Invite is no longer pending.")
+    }
+  }
+  familyPartner_update(
+    key: { familyId: $familyId, email: $email }
+    data: { status: "declined", respondedAt_expr: "request.time" }
+  )
+}
+
+mutation UpsertBaby(
+  $id: String!
+  $familyId: String!
+  $name: String!
+  $birthDate: Timestamp!
+  $gender: String
+  $birthWeight: Float
+  $birthHeight: Float
+  $birthHeadCircumference: Float
+  $currentWeight: Float
+  $currentHeight: Float
+  $currentHeadCircumference: Float
+) @auth(level: USER) @transaction {
+  query @redact {
+    family(key: { id: $familyId }) {
+      ownerUserId
+        @check(expr: "this == auth.uid", message: "Only the family owner can update baby profile.")
+    }
+  }
+  baby_upsert(
+    data: {
+      id: $id
+      familyId: $familyId
+      name: $name
+      birthDate: $birthDate
+      gender: $gender
+      birthWeight: $birthWeight
+      birthHeight: $birthHeight
+      birthHeadCircumference: $birthHeadCircumference
+      currentWeight: $currentWeight
+      currentHeight: $currentHeight
+      currentHeadCircumference: $currentHeadCircumference
+    }
+  )
+}
+
+mutation UpsertPregnancy(
+  $id: String!
+  $startDate: Timestamp!
+  $dueDate: Timestamp!
+  $status: String!
+  $birthCompletedAt: Timestamp
+) @auth(level: USER) {
+  pregnancy_upsert(
+    data: {
+      id: $id
+      userId_expr: "auth.uid"
+      startDate: $startDate
+      dueDate: $dueDate
+      status: $status
+      birthCompletedAt: $birthCompletedAt
+    }
+  )
+}
+
+mutation UpsertTrackerRecord(
+  $id: String!
+  $familyId: String
+  $babyId: String
+  $type: String!
+  $title: String!
+  $value: String
+  $note: String
+  $occurredAt: Timestamp!
+  $deletedAt: Timestamp
+) @auth(level: USER) {
+  trackerRecord_upsert(
+    data: {
+      id: $id
+      familyId: $familyId
+      babyId: $babyId
+      createdByUserId_expr: "auth.uid"
+      type: $type
+      title: $title
+      value: $value
+      note: $note
+      occurredAt: $occurredAt
+      updatedAt_expr: "request.time"
+      deletedAt: $deletedAt
+    }
+  )
+}

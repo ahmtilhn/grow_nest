@@ -1,0 +1,958 @@
+extend type Mutation {
+  """
+  ✨ Insert a single `AppNotification` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  appNotification_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: AppNotification_Data!
+  ): AppNotification_KeyOutput! @fdc_generated(from: "AppNotification", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Baby` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  baby_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Baby_Data!
+  ): Baby_KeyOutput! @fdc_generated(from: "Baby", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Family` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  family_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Family_Data!
+  ): Family_KeyOutput! @fdc_generated(from: "Family", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `FamilyPartner` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  familyPartner_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: FamilyPartner_Data!
+  ): FamilyPartner_KeyOutput! @fdc_generated(from: "FamilyPartner", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `Pregnancy` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  pregnancy_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: Pregnancy_Data!
+  ): Pregnancy_KeyOutput! @fdc_generated(from: "Pregnancy", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `TrackerRecord` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  trackerRecord_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: TrackerRecord_Data!
+  ): TrackerRecord_KeyOutput! @fdc_generated(from: "TrackerRecord", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `User` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert a single `VaccineEvent` into the table and return its key. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  vaccineEvent_insert(
+    """
+    Data object to insert into the table.
+    """
+    data: VaccineEvent_Data!
+  ): VaccineEvent_KeyOutput! @fdc_generated(from: "VaccineEvent", purpose: INSERT_SINGLE)
+  """
+  ✨ Insert `AppNotification` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  appNotification_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [AppNotification_Data!]!
+  ): [AppNotification_KeyOutput!]! @fdc_generated(from: "AppNotification", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Baby` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  baby_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Baby_Data!]!
+  ): [Baby_KeyOutput!]! @fdc_generated(from: "Baby", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Family` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  family_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Family_Data!]!
+  ): [Family_KeyOutput!]! @fdc_generated(from: "Family", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `FamilyPartner` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  familyPartner_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [FamilyPartner_Data!]!
+  ): [FamilyPartner_KeyOutput!]! @fdc_generated(from: "FamilyPartner", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `Pregnancy` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  pregnancy_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [Pregnancy_Data!]!
+  ): [Pregnancy_KeyOutput!]! @fdc_generated(from: "Pregnancy", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `TrackerRecord` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  trackerRecord_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [TrackerRecord_Data!]!
+  ): [TrackerRecord_KeyOutput!]! @fdc_generated(from: "TrackerRecord", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `User` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  user_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert `VaccineEvent` objects into the table and return their keys. Columns not specified in `data` will receive defaults (e.g. `null`).
+  """
+  vaccineEvent_insertMany(
+    """
+    List of data objects to insert into the table.
+    """
+    data: [VaccineEvent_Data!]!
+  ): [VaccineEvent_KeyOutput!]! @fdc_generated(from: "VaccineEvent", purpose: INSERT_MULTIPLE)
+  """
+  ✨ Insert or update a single `AppNotification` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `AppNotification`.
+  """
+  appNotification_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: AppNotification_Data!
+  ): AppNotification_KeyOutput! @fdc_generated(from: "AppNotification", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Baby` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Baby`.
+  """
+  baby_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Baby_Data!
+  ): Baby_KeyOutput! @fdc_generated(from: "Baby", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Family` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Family`.
+  """
+  family_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Family_Data!
+  ): Family_KeyOutput! @fdc_generated(from: "Family", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `FamilyPartner` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `FamilyPartner`.
+  """
+  familyPartner_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: FamilyPartner_Data!
+  ): FamilyPartner_KeyOutput! @fdc_generated(from: "FamilyPartner", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `Pregnancy` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Pregnancy`.
+  """
+  pregnancy_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: Pregnancy_Data!
+  ): Pregnancy_KeyOutput! @fdc_generated(from: "Pregnancy", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `TrackerRecord` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `TrackerRecord`.
+  """
+  trackerRecord_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: TrackerRecord_Data!
+  ): TrackerRecord_KeyOutput! @fdc_generated(from: "TrackerRecord", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `User` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: User_Data!
+  ): User_KeyOutput! @fdc_generated(from: "User", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update a single `VaccineEvent` into the table, based on the primary key. Returns the key of the newly inserted or existing updated `VaccineEvent`.
+  """
+  vaccineEvent_upsert(
+    """
+    Data object to insert or update if it already exists.
+    """
+    data: VaccineEvent_Data!
+  ): VaccineEvent_KeyOutput! @fdc_generated(from: "VaccineEvent", purpose: UPSERT_SINGLE)
+  """
+  ✨ Insert or update `AppNotification` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `AppNotification`.
+  """
+  appNotification_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [AppNotification_Data!]!
+  ): [AppNotification_KeyOutput!]! @fdc_generated(from: "AppNotification", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Baby` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Baby`.
+  """
+  baby_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Baby_Data!]!
+  ): [Baby_KeyOutput!]! @fdc_generated(from: "Baby", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Family` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Family`.
+  """
+  family_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Family_Data!]!
+  ): [Family_KeyOutput!]! @fdc_generated(from: "Family", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `FamilyPartner` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `FamilyPartner`.
+  """
+  familyPartner_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [FamilyPartner_Data!]!
+  ): [FamilyPartner_KeyOutput!]! @fdc_generated(from: "FamilyPartner", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `Pregnancy` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `Pregnancy`.
+  """
+  pregnancy_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [Pregnancy_Data!]!
+  ): [Pregnancy_KeyOutput!]! @fdc_generated(from: "Pregnancy", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `TrackerRecord` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `TrackerRecord`.
+  """
+  trackerRecord_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [TrackerRecord_Data!]!
+  ): [TrackerRecord_KeyOutput!]! @fdc_generated(from: "TrackerRecord", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `User` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `User`.
+  """
+  user_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [User_Data!]!
+  ): [User_KeyOutput!]! @fdc_generated(from: "User", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Insert or update `VaccineEvent` objects into the table, based on the primary key. Returns the key of the newly inserted or existing updated `VaccineEvent`.
+  """
+  vaccineEvent_upsertMany(
+    """
+    List of data objects to insert or update if it already exists.
+    """
+    data: [VaccineEvent_Data!]!
+  ): [VaccineEvent_KeyOutput!]! @fdc_generated(from: "VaccineEvent", purpose: UPSERT_MULTIPLE)
+  """
+  ✨ Update a single `AppNotification` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `AppNotification` or `null` if not found.
+  """
+  appNotification_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: AppNotification_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: AppNotification_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: AppNotification_Data!
+  ): AppNotification_KeyOutput @fdc_generated(from: "AppNotification", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Baby` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Baby` or `null` if not found.
+  """
+  baby_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Baby_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Baby_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Baby_Data!
+  ): Baby_KeyOutput @fdc_generated(from: "Baby", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Family` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Family` or `null` if not found.
+  """
+  family_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Family_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Family_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Family_Data!
+  ): Family_KeyOutput @fdc_generated(from: "Family", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `FamilyPartner` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `FamilyPartner` or `null` if not found.
+  """
+  familyPartner_update(
+    """
+    The key used to identify the object.
+    """
+    key: FamilyPartner_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: FamilyPartner_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: FamilyPartner_Data!
+  ): FamilyPartner_KeyOutput @fdc_generated(from: "FamilyPartner", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `Pregnancy` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `Pregnancy` or `null` if not found.
+  """
+  pregnancy_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Pregnancy_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Pregnancy_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: Pregnancy_Data!
+  ): Pregnancy_KeyOutput @fdc_generated(from: "Pregnancy", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `TrackerRecord` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `TrackerRecord` or `null` if not found.
+  """
+  trackerRecord_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: TrackerRecord_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: TrackerRecord_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: TrackerRecord_Data!
+  ): TrackerRecord_KeyOutput @fdc_generated(from: "TrackerRecord", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `User` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `User` or `null` if not found.
+  """
+  user_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: User_Data!
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update a single `VaccineEvent` based on `id`, `key` or `first`, setting columns specified in `data`. Returns the key of the updated `VaccineEvent` or `null` if not found.
+  """
+  vaccineEvent_update(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: VaccineEvent_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: VaccineEvent_FirstRow
+
+    """
+    Data object containing fields to be updated.
+    """
+    data: VaccineEvent_Data!
+  ): VaccineEvent_KeyOutput @fdc_generated(from: "VaccineEvent", purpose: UPDATE_SINGLE)
+  """
+  ✨ Update `AppNotification` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  appNotification_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: AppNotification_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: AppNotification_Data!
+  ): Int! @fdc_generated(from: "AppNotification", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Baby` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  baby_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Baby_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Baby_Data!
+  ): Int! @fdc_generated(from: "Baby", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Family` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  family_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Family_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Family_Data!
+  ): Int! @fdc_generated(from: "Family", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `FamilyPartner` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  familyPartner_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: FamilyPartner_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: FamilyPartner_Data!
+  ): Int! @fdc_generated(from: "FamilyPartner", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `Pregnancy` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  pregnancy_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: Pregnancy_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: Pregnancy_Data!
+  ): Int! @fdc_generated(from: "Pregnancy", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `TrackerRecord` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  trackerRecord_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: TrackerRecord_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: TrackerRecord_Data!
+  ): Int! @fdc_generated(from: "TrackerRecord", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `User` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  user_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: User_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: User_Data!
+  ): Int! @fdc_generated(from: "User", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Update `VaccineEvent` objects matching `where` conditions (or `all`, if true) according to `data`. Returns the number of rows updated.
+  """
+  vaccineEvent_updateMany(
+    """
+    Filter condition to specify which rows to update.
+    """
+    where: VaccineEvent_Filter
+
+    """
+    Set to true to update all rows.
+    """
+    all: Boolean = false
+
+    """
+    Data object containing fields to update.
+    """
+    data: VaccineEvent_Data!
+  ): Int! @fdc_generated(from: "VaccineEvent", purpose: UPDATE_MULTIPLE)
+  """
+  ✨ Delete a single `AppNotification` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  appNotification_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: AppNotification_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: AppNotification_FirstRow
+  ): AppNotification_KeyOutput @fdc_generated(from: "AppNotification", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Baby` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  baby_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Baby_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Baby_FirstRow
+  ): Baby_KeyOutput @fdc_generated(from: "Baby", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Family` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  family_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Family_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Family_FirstRow
+  ): Family_KeyOutput @fdc_generated(from: "Family", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `FamilyPartner` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  familyPartner_delete(
+    """
+    The key used to identify the object.
+    """
+    key: FamilyPartner_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: FamilyPartner_FirstRow
+  ): FamilyPartner_KeyOutput @fdc_generated(from: "FamilyPartner", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `Pregnancy` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  pregnancy_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Pregnancy_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Pregnancy_FirstRow
+  ): Pregnancy_KeyOutput @fdc_generated(from: "Pregnancy", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `TrackerRecord` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  trackerRecord_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: TrackerRecord_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: TrackerRecord_FirstRow
+  ): TrackerRecord_KeyOutput @fdc_generated(from: "TrackerRecord", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `User` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  user_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+  ): User_KeyOutput @fdc_generated(from: "User", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete a single `VaccineEvent` based on `id`, `key` or `first` and return its key (or `null` if not found).
+  """
+  vaccineEvent_delete(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: VaccineEvent_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: VaccineEvent_FirstRow
+  ): VaccineEvent_KeyOutput @fdc_generated(from: "VaccineEvent", purpose: DELETE_SINGLE)
+  """
+  ✨ Delete `AppNotification` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  appNotification_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: AppNotification_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "AppNotification", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Baby` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  baby_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Baby_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Baby", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Family` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  family_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Family_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Family", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `FamilyPartner` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  familyPartner_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: FamilyPartner_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "FamilyPartner", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `Pregnancy` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  pregnancy_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: Pregnancy_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "Pregnancy", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `TrackerRecord` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  trackerRecord_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: TrackerRecord_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "TrackerRecord", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `User` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  user_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: User_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "User", purpose: DELETE_MULTIPLE)
+  """
+  ✨ Delete `VaccineEvent` objects matching `where` conditions (or `all`, if true). Returns the number of rows deleted.
+  """
+  vaccineEvent_deleteMany(
+    """
+    Filter condition to specify which rows to delete.
+    """
+    where: VaccineEvent_Filter
+
+    """
+    Set to true to delete all rows.
+    """
+    all: Boolean = false
+  ): Int! @fdc_generated(from: "VaccineEvent", purpose: DELETE_MULTIPLE)
+}

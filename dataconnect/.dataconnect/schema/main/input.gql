@@ -1,0 +1,3344 @@
+"""
+✨ `AppNotification_KeyOutput` returns the primary key fields of table type `AppNotification`.
+
+It has the same format as `AppNotification_Key`, but is only used as mutation return value.
+"""
+scalar AppNotification_KeyOutput
+"""
+✨ `Baby_KeyOutput` returns the primary key fields of table type `Baby`.
+
+It has the same format as `Baby_Key`, but is only used as mutation return value.
+"""
+scalar Baby_KeyOutput
+"""
+✨ `Family_KeyOutput` returns the primary key fields of table type `Family`.
+
+It has the same format as `Family_Key`, but is only used as mutation return value.
+"""
+scalar Family_KeyOutput
+"""
+✨ `FamilyPartner_KeyOutput` returns the primary key fields of table type `FamilyPartner`.
+
+It has the same format as `FamilyPartner_Key`, but is only used as mutation return value.
+"""
+scalar FamilyPartner_KeyOutput
+"""
+✨ `Pregnancy_KeyOutput` returns the primary key fields of table type `Pregnancy`.
+
+It has the same format as `Pregnancy_Key`, but is only used as mutation return value.
+"""
+scalar Pregnancy_KeyOutput
+"""
+✨ `TrackerRecord_KeyOutput` returns the primary key fields of table type `TrackerRecord`.
+
+It has the same format as `TrackerRecord_Key`, but is only used as mutation return value.
+"""
+scalar TrackerRecord_KeyOutput
+"""
+✨ `User_KeyOutput` returns the primary key fields of table type `User`.
+
+It has the same format as `User_Key`, but is only used as mutation return value.
+"""
+scalar User_KeyOutput
+"""
+✨ `VaccineEvent_KeyOutput` returns the primary key fields of table type `VaccineEvent`.
+
+It has the same format as `VaccineEvent_Key`, but is only used as mutation return value.
+"""
+scalar VaccineEvent_KeyOutput
+"""
+✨ Generated data input type for table 'AppNotification'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input AppNotification_Data {
+  """
+  ✨ Generated from Field `AppNotification`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `AppNotification`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`userId` of type `String!`
+  """
+  userId: String
+  """
+  ✨ `_expr` server value variant of `userId` (✨ Generated from Field `AppNotification`.`userId` of type `String!`)
+  """
+  userId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`user` of type `User!`
+  """
+  user: User_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`body` of type `String!`
+  """
+  body: String
+  """
+  ✨ `_expr` server value variant of `body` (✨ Generated from Field `AppNotification`.`body` of type `String!`)
+  """
+  body_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`category` of type `String!`
+  """
+  category: String
+  """
+  ✨ `_expr` server value variant of `category` (✨ Generated from Field `AppNotification`.`category` of type `String!`)
+  """
+  category_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `AppNotification`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `AppNotification`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `AppNotification`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`payload` of type `String`
+  """
+  payload: String
+  """
+  ✨ `_expr` server value variant of `payload` (✨ Generated from Field `AppNotification`.`payload` of type `String`)
+  """
+  payload_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`readAt` of type `Timestamp`
+  """
+  readAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `readAt` (✨ Generated from Field `AppNotification`.`readAt` of type `Timestamp`)
+  """
+  readAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `readAt` (✨ Generated from Field `AppNotification`.`readAt` of type `Timestamp`)
+  """
+  readAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `readAt` (✨ Generated from Field `AppNotification`.`readAt` of type `Timestamp`)
+  """
+  readAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`status` of type `String!`
+  """
+  status: String
+  """
+  ✨ `_expr` server value variant of `status` (✨ Generated from Field `AppNotification`.`status` of type `String!`)
+  """
+  status_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`title` of type `String!`
+  """
+  title: String
+  """
+  ✨ `_expr` server value variant of `title` (✨ Generated from Field `AppNotification`.`title` of type `String!`)
+  """
+  title_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `AppNotification`.`type` of type `String!`
+  """
+  type: String
+  """
+  ✨ `_expr` server value variant of `type` (✨ Generated from Field `AppNotification`.`type` of type `String!`)
+  """
+  type_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'AppNotification'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input AppNotification_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [AppNotification_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: AppNotification_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [AppNotification_Filter!]
+  """
+  ✨ Generated from Field `AppNotification`.`id` of type `String!`
+  """
+  id: String_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`userId` of type `String!`
+  """
+  userId: String_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`user` of type `User!`
+  """
+  user: User_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`body` of type `String!`
+  """
+  body: String_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`category` of type `String!`
+  """
+  category: String_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`payload` of type `String`
+  """
+  payload: String_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`readAt` of type `Timestamp`
+  """
+  readAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`status` of type `String!`
+  """
+  status: String_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`title` of type `String!`
+  """
+  title: String_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`type` of type `String!`
+  """
+  type: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'AppNotification'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input AppNotification_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [AppNotification_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: AppNotification_Filter
+}
+"""
+✨ Generated having input type for table 'AppNotification'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input AppNotification_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [AppNotification_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: AppNotification_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [AppNotification_Having!]
+  """
+  ✨ Generated from Field `AppNotification`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`body_count` of type `Int!`
+  """
+  body_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`category_count` of type `Int!`
+  """
+  category_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`payload_count` of type `Int!`
+  """
+  payload_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`readAt_count` of type `Int!`
+  """
+  readAt_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`status_count` of type `Int!`
+  """
+  status_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`title_count` of type `Int!`
+  """
+  title_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`type_count` of type `Int!`
+  """
+  type_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`userId_count` of type `Int!`
+  """
+  userId_count: Int_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`readAt_min` of type `Timestamp`
+  """
+  readAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `AppNotification`.`readAt_max` of type `Timestamp`
+  """
+  readAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'AppNotification'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input AppNotification_Key {
+  """
+  ✨ Generated from Field `AppNotification`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `AppNotification`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'AppNotification'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input AppNotification_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: AppNotification_Filter
+}
+"""
+✨ Generated order input type for table 'AppNotification'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input AppNotification_Order {
+  """
+  ✨ Generated from Field `AppNotification`.`id` of type `String!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`userId` of type `String!`
+  """
+  userId: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`user` of type `User!`
+  """
+  user: User_Order
+  """
+  ✨ Generated from Field `AppNotification`.`body` of type `String!`
+  """
+  body: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`category` of type `String!`
+  """
+  category: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`payload` of type `String`
+  """
+  payload: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`readAt` of type `Timestamp`
+  """
+  readAt: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`status` of type `String!`
+  """
+  status: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`title` of type `String!`
+  """
+  title: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`type` of type `String!`
+  """
+  type: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`body_count` of type `Int!`
+  """
+  body_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`category_count` of type `Int!`
+  """
+  category_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`payload_count` of type `Int!`
+  """
+  payload_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`readAt_count` of type `Int!`
+  """
+  readAt_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`title_count` of type `Int!`
+  """
+  title_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`type_count` of type `Int!`
+  """
+  type_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`userId_count` of type `Int!`
+  """
+  userId_count: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`readAt_min` of type `Timestamp`
+  """
+  readAt_min: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `AppNotification`.`readAt_max` of type `Timestamp`
+  """
+  readAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'Baby'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Baby_Data {
+  """
+  ✨ Generated from Field `Baby`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Baby`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`familyId` of type `String!`
+  """
+  familyId: String
+  """
+  ✨ `_expr` server value variant of `familyId` (✨ Generated from Field `Baby`.`familyId` of type `String!`)
+  """
+  familyId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`family` of type `Family!`
+  """
+  family: Family_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`birthDate` of type `Timestamp!`
+  """
+  birthDate: Timestamp
+  """
+  ✨ `_expr` server value variant of `birthDate` (✨ Generated from Field `Baby`.`birthDate` of type `Timestamp!`)
+  """
+  birthDate_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `birthDate` (✨ Generated from Field `Baby`.`birthDate` of type `Timestamp!`)
+  """
+  birthDate_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `birthDate` (✨ Generated from Field `Baby`.`birthDate` of type `Timestamp!`)
+  """
+  birthDate_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference` of type `Float`
+  """
+  birthHeadCircumference: Float
+  """
+  ✨ `_expr` server value variant of `birthHeadCircumference` (✨ Generated from Field `Baby`.`birthHeadCircumference` of type `Float`)
+  """
+  birthHeadCircumference_expr: Float_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `birthHeadCircumference` (✨ Generated from Field `Baby`.`birthHeadCircumference` of type `Float`)
+  """
+  birthHeadCircumference_update: [Float_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`birthHeight` of type `Float`
+  """
+  birthHeight: Float
+  """
+  ✨ `_expr` server value variant of `birthHeight` (✨ Generated from Field `Baby`.`birthHeight` of type `Float`)
+  """
+  birthHeight_expr: Float_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `birthHeight` (✨ Generated from Field `Baby`.`birthHeight` of type `Float`)
+  """
+  birthHeight_update: [Float_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`birthWeight` of type `Float`
+  """
+  birthWeight: Float
+  """
+  ✨ `_expr` server value variant of `birthWeight` (✨ Generated from Field `Baby`.`birthWeight` of type `Float`)
+  """
+  birthWeight_expr: Float_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `birthWeight` (✨ Generated from Field `Baby`.`birthWeight` of type `Float`)
+  """
+  birthWeight_update: [Float_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `Baby`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `Baby`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `Baby`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference` of type `Float`
+  """
+  currentHeadCircumference: Float
+  """
+  ✨ `_expr` server value variant of `currentHeadCircumference` (✨ Generated from Field `Baby`.`currentHeadCircumference` of type `Float`)
+  """
+  currentHeadCircumference_expr: Float_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `currentHeadCircumference` (✨ Generated from Field `Baby`.`currentHeadCircumference` of type `Float`)
+  """
+  currentHeadCircumference_update: [Float_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`currentHeight` of type `Float`
+  """
+  currentHeight: Float
+  """
+  ✨ `_expr` server value variant of `currentHeight` (✨ Generated from Field `Baby`.`currentHeight` of type `Float`)
+  """
+  currentHeight_expr: Float_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `currentHeight` (✨ Generated from Field `Baby`.`currentHeight` of type `Float`)
+  """
+  currentHeight_update: [Float_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`currentWeight` of type `Float`
+  """
+  currentWeight: Float
+  """
+  ✨ `_expr` server value variant of `currentWeight` (✨ Generated from Field `Baby`.`currentWeight` of type `Float`)
+  """
+  currentWeight_expr: Float_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `currentWeight` (✨ Generated from Field `Baby`.`currentWeight` of type `Float`)
+  """
+  currentWeight_update: [Float_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`gender` of type `String`
+  """
+  gender: String
+  """
+  ✨ `_expr` server value variant of `gender` (✨ Generated from Field `Baby`.`gender` of type `String`)
+  """
+  gender_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Baby`.`name` of type `String!`
+  """
+  name: String
+  """
+  ✨ `_expr` server value variant of `name` (✨ Generated from Field `Baby`.`name` of type `String!`)
+  """
+  name_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'Baby'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Baby_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Baby_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Baby_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Baby_Filter!]
+  """
+  ✨ Generated from Field `Baby`.`id` of type `String!`
+  """
+  id: String_Filter
+  """
+  ✨ Generated from Field `Baby`.`familyId` of type `String!`
+  """
+  familyId: String_Filter
+  """
+  ✨ Generated from Field `Baby`.`family` of type `Family!`
+  """
+  family: Family_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthDate` of type `Timestamp!`
+  """
+  birthDate: Timestamp_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference` of type `Float`
+  """
+  birthHeadCircumference: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeight` of type `Float`
+  """
+  birthHeight: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthWeight` of type `Float`
+  """
+  birthWeight: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference` of type `Float`
+  """
+  currentHeadCircumference: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeight` of type `Float`
+  """
+  currentHeight: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentWeight` of type `Float`
+  """
+  currentWeight: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`gender` of type `String`
+  """
+  gender: String_Filter
+  """
+  ✨ Generated from Field `Baby`.`name` of type `String!`
+  """
+  name: String_Filter
+  """
+  ✨ Generated from Field `Baby`.`trackerRecords_on_baby` of type `[TrackerRecord!]!`
+  """
+  trackerRecords_on_baby: TrackerRecord_ListFilter
+  """
+  ✨ Generated from Field `Baby`.`vaccineEvents_on_baby` of type `[VaccineEvent!]!`
+  """
+  vaccineEvents_on_baby: VaccineEvent_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'Baby'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Baby_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Baby_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Baby_Filter
+}
+"""
+✨ Generated having input type for table 'Baby'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Baby_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Baby_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Baby_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Baby_Having!]
+  """
+  ✨ Generated from Field `Baby`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthDate_count` of type `Int!`
+  """
+  birthDate_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_count` of type `Int!`
+  """
+  birthHeadCircumference_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_count` of type `Int!`
+  """
+  birthHeight_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_count` of type `Int!`
+  """
+  birthWeight_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_count` of type `Int!`
+  """
+  currentHeadCircumference_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_count` of type `Int!`
+  """
+  currentHeight_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_count` of type `Int!`
+  """
+  currentWeight_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`familyId_count` of type `Int!`
+  """
+  familyId_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`gender_count` of type `Int!`
+  """
+  gender_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`name_count` of type `Int!`
+  """
+  name_count: Int_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_sum` of type `Float`
+  """
+  birthHeadCircumference_sum: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_sum` of type `Float`
+  """
+  birthHeight_sum: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_sum` of type `Float`
+  """
+  birthWeight_sum: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_sum` of type `Float`
+  """
+  currentHeadCircumference_sum: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_sum` of type `Float`
+  """
+  currentHeight_sum: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_sum` of type `Float`
+  """
+  currentWeight_sum: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_avg` of type `Float`
+  """
+  birthHeadCircumference_avg: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_avg` of type `Float`
+  """
+  birthHeight_avg: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_avg` of type `Float`
+  """
+  birthWeight_avg: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_avg` of type `Float`
+  """
+  currentHeadCircumference_avg: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_avg` of type `Float`
+  """
+  currentHeight_avg: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_avg` of type `Float`
+  """
+  currentWeight_avg: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthDate_min` of type `Timestamp`
+  """
+  birthDate_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_min` of type `Float`
+  """
+  birthHeadCircumference_min: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_min` of type `Float`
+  """
+  birthHeight_min: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_min` of type `Float`
+  """
+  birthWeight_min: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_min` of type `Float`
+  """
+  currentHeadCircumference_min: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_min` of type `Float`
+  """
+  currentHeight_min: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_min` of type `Float`
+  """
+  currentWeight_min: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthDate_max` of type `Timestamp`
+  """
+  birthDate_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_max` of type `Float`
+  """
+  birthHeadCircumference_max: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_max` of type `Float`
+  """
+  birthHeight_max: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_max` of type `Float`
+  """
+  birthWeight_max: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_max` of type `Float`
+  """
+  currentHeadCircumference_max: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_max` of type `Float`
+  """
+  currentHeight_max: Float_Filter
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_max` of type `Float`
+  """
+  currentWeight_max: Float_Filter
+}
+"""
+✨ Generated key input type for table 'Baby'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Baby_Key {
+  """
+  ✨ Generated from Field `Baby`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Baby`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'Baby'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Baby_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Baby_Filter
+}
+"""
+✨ Generated order input type for table 'Baby'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Baby_Order {
+  """
+  ✨ Generated from Field `Baby`.`id` of type `String!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`familyId` of type `String!`
+  """
+  familyId: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`family` of type `Family!`
+  """
+  family: Family_Order
+  """
+  ✨ Generated from Field `Baby`.`birthDate` of type `Timestamp!`
+  """
+  birthDate: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference` of type `Float`
+  """
+  birthHeadCircumference: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeight` of type `Float`
+  """
+  birthHeight: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthWeight` of type `Float`
+  """
+  birthWeight: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference` of type `Float`
+  """
+  currentHeadCircumference: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeight` of type `Float`
+  """
+  currentHeight: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentWeight` of type `Float`
+  """
+  currentWeight: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`gender` of type `String`
+  """
+  gender: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`name` of type `String!`
+  """
+  name: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthDate_count` of type `Int!`
+  """
+  birthDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_count` of type `Int!`
+  """
+  birthHeadCircumference_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_count` of type `Int!`
+  """
+  birthHeight_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_count` of type `Int!`
+  """
+  birthWeight_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_count` of type `Int!`
+  """
+  currentHeadCircumference_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_count` of type `Int!`
+  """
+  currentHeight_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_count` of type `Int!`
+  """
+  currentWeight_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`familyId_count` of type `Int!`
+  """
+  familyId_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`gender_count` of type `Int!`
+  """
+  gender_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`name_count` of type `Int!`
+  """
+  name_count: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_sum` of type `Float`
+  """
+  birthHeadCircumference_sum: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_sum` of type `Float`
+  """
+  birthHeight_sum: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_sum` of type `Float`
+  """
+  birthWeight_sum: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_sum` of type `Float`
+  """
+  currentHeadCircumference_sum: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_sum` of type `Float`
+  """
+  currentHeight_sum: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_sum` of type `Float`
+  """
+  currentWeight_sum: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_avg` of type `Float`
+  """
+  birthHeadCircumference_avg: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_avg` of type `Float`
+  """
+  birthHeight_avg: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_avg` of type `Float`
+  """
+  birthWeight_avg: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_avg` of type `Float`
+  """
+  currentHeadCircumference_avg: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_avg` of type `Float`
+  """
+  currentHeight_avg: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_avg` of type `Float`
+  """
+  currentWeight_avg: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthDate_min` of type `Timestamp`
+  """
+  birthDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_min` of type `Float`
+  """
+  birthHeadCircumference_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_min` of type `Float`
+  """
+  birthHeight_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_min` of type `Float`
+  """
+  birthWeight_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_min` of type `Float`
+  """
+  currentHeadCircumference_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_min` of type `Float`
+  """
+  currentHeight_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_min` of type `Float`
+  """
+  currentWeight_min: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthDate_max` of type `Timestamp`
+  """
+  birthDate_max: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeadCircumference_max` of type `Float`
+  """
+  birthHeadCircumference_max: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthHeight_max` of type `Float`
+  """
+  birthHeight_max: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`birthWeight_max` of type `Float`
+  """
+  birthWeight_max: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeadCircumference_max` of type `Float`
+  """
+  currentHeadCircumference_max: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentHeight_max` of type `Float`
+  """
+  currentHeight_max: OrderDirection
+  """
+  ✨ Generated from Field `Baby`.`currentWeight_max` of type `Float`
+  """
+  currentWeight_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'Family'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Family_Data {
+  """
+  ✨ Generated from Field `Family`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Family`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Family`.`ownerUserId` of type `String!`
+  """
+  ownerUserId: String
+  """
+  ✨ `_expr` server value variant of `ownerUserId` (✨ Generated from Field `Family`.`ownerUserId` of type `String!`)
+  """
+  ownerUserId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Family`.`owner` of type `User!`
+  """
+  owner: User_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Family`.`activeBabyId` of type `String`
+  """
+  activeBabyId: String
+  """
+  ✨ `_expr` server value variant of `activeBabyId` (✨ Generated from Field `Family`.`activeBabyId` of type `String`)
+  """
+  activeBabyId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Family`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `Family`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `Family`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `Family`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'Family'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Family_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Family_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Family_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Family_Filter!]
+  """
+  ✨ Generated from Field `Family`.`id` of type `String!`
+  """
+  id: String_Filter
+  """
+  ✨ Generated from Field `Family`.`ownerUserId` of type `String!`
+  """
+  ownerUserId: String_Filter
+  """
+  ✨ Generated from Field `Family`.`owner` of type `User!`
+  """
+  owner: User_Filter
+  """
+  ✨ Generated from Field `Family`.`activeBabyId` of type `String`
+  """
+  activeBabyId: String_Filter
+  """
+  ✨ Generated from Field `Family`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `Family`.`babies_on_family` of type `[Baby!]!`
+  """
+  babies_on_family: Baby_ListFilter
+  """
+  ✨ Generated from Field `Family`.`familyPartners_on_family` of type `[FamilyPartner!]!`
+  """
+  familyPartners_on_family: FamilyPartner_ListFilter
+  """
+  ✨ Generated from Field `Family`.`trackerRecords_on_family` of type `[TrackerRecord!]!`
+  """
+  trackerRecords_on_family: TrackerRecord_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'Family'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Family_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Family_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Family_Filter
+}
+"""
+✨ Generated having input type for table 'Family'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Family_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Family_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Family_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Family_Having!]
+  """
+  ✨ Generated from Field `Family`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Family`.`activeBabyId_count` of type `Int!`
+  """
+  activeBabyId_count: Int_Filter
+  """
+  ✨ Generated from Field `Family`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Family`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Family`.`ownerUserId_count` of type `Int!`
+  """
+  ownerUserId_count: Int_Filter
+  """
+  ✨ Generated from Field `Family`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Family`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Family'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Family_Key {
+  """
+  ✨ Generated from Field `Family`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Family`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'Family'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Family_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Family_Filter
+}
+"""
+✨ Generated order input type for table 'Family'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Family_Order {
+  """
+  ✨ Generated from Field `Family`.`id` of type `String!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`ownerUserId` of type `String!`
+  """
+  ownerUserId: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`owner` of type `User!`
+  """
+  owner: User_Order
+  """
+  ✨ Generated from Field `Family`.`activeBabyId` of type `String`
+  """
+  activeBabyId: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`activeBabyId_count` of type `Int!`
+  """
+  activeBabyId_count: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`ownerUserId_count` of type `Int!`
+  """
+  ownerUserId_count: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Family`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'FamilyPartner'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input FamilyPartner_Data {
+  """
+  ✨ Generated from Field `FamilyPartner`.`familyId` of type `String!`
+  """
+  familyId: String
+  """
+  ✨ `_expr` server value variant of `familyId` (✨ Generated from Field `FamilyPartner`.`familyId` of type `String!`)
+  """
+  familyId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`email` of type `String!`
+  """
+  email: String
+  """
+  ✨ `_expr` server value variant of `email` (✨ Generated from Field `FamilyPartner`.`email` of type `String!`)
+  """
+  email_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`family` of type `Family!`
+  """
+  family: Family_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUserId` of type `String`
+  """
+  acceptedUserId: String
+  """
+  ✨ `_expr` server value variant of `acceptedUserId` (✨ Generated from Field `FamilyPartner`.`acceptedUserId` of type `String`)
+  """
+  acceptedUserId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedByUserId` of type `String!`
+  """
+  invitedByUserId: String
+  """
+  ✨ `_expr` server value variant of `invitedByUserId` (✨ Generated from Field `FamilyPartner`.`invitedByUserId` of type `String!`)
+  """
+  invitedByUserId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUser` of type `User`
+  """
+  acceptedUser: User_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedBy` of type `User!`
+  """
+  invitedBy: User_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `FamilyPartner`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `FamilyPartner`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `FamilyPartner`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt` of type `Timestamp`
+  """
+  respondedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `respondedAt` (✨ Generated from Field `FamilyPartner`.`respondedAt` of type `Timestamp`)
+  """
+  respondedAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `respondedAt` (✨ Generated from Field `FamilyPartner`.`respondedAt` of type `Timestamp`)
+  """
+  respondedAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `respondedAt` (✨ Generated from Field `FamilyPartner`.`respondedAt` of type `Timestamp`)
+  """
+  respondedAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`status` of type `String!`
+  """
+  status: String
+  """
+  ✨ `_expr` server value variant of `status` (✨ Generated from Field `FamilyPartner`.`status` of type `String!`)
+  """
+  status_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'FamilyPartner'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input FamilyPartner_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [FamilyPartner_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: FamilyPartner_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [FamilyPartner_Filter!]
+  """
+  ✨ Generated from Field `FamilyPartner`.`familyId` of type `String!`
+  """
+  familyId: String_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`email` of type `String!`
+  """
+  email: String_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`family` of type `Family!`
+  """
+  family: Family_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUserId` of type `String`
+  """
+  acceptedUserId: String_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedByUserId` of type `String!`
+  """
+  invitedByUserId: String_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUser` of type `User`
+  """
+  acceptedUser: User_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedBy` of type `User!`
+  """
+  invitedBy: User_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt` of type `Timestamp`
+  """
+  respondedAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`status` of type `String!`
+  """
+  status: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'FamilyPartner'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input FamilyPartner_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [FamilyPartner_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: FamilyPartner_Filter
+}
+"""
+✨ Generated having input type for table 'FamilyPartner'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input FamilyPartner_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [FamilyPartner_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: FamilyPartner_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [FamilyPartner_Having!]
+  """
+  ✨ Generated from Field `FamilyPartner`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUserId_count` of type `Int!`
+  """
+  acceptedUserId_count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`email_count` of type `Int!`
+  """
+  email_count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`familyId_count` of type `Int!`
+  """
+  familyId_count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedByUserId_count` of type `Int!`
+  """
+  invitedByUserId_count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt_count` of type `Int!`
+  """
+  respondedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`status_count` of type `Int!`
+  """
+  status_count: Int_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt_min` of type `Timestamp`
+  """
+  respondedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt_max` of type `Timestamp`
+  """
+  respondedAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'FamilyPartner'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input FamilyPartner_Key {
+  """
+  ✨ Generated from Field `FamilyPartner`.`familyId` of type `String!`
+  """
+  familyId: String
+  """
+  ✨ `_expr` server value variant of `familyId` (✨ Generated from Field `FamilyPartner`.`familyId` of type `String!`)
+  """
+  familyId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `FamilyPartner`.`email` of type `String!`
+  """
+  email: String
+  """
+  ✨ `_expr` server value variant of `email` (✨ Generated from Field `FamilyPartner`.`email` of type `String!`)
+  """
+  email_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'FamilyPartner'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input FamilyPartner_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: FamilyPartner_Filter
+}
+"""
+✨ Generated order input type for table 'FamilyPartner'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input FamilyPartner_Order {
+  """
+  ✨ Generated from Field `FamilyPartner`.`familyId` of type `String!`
+  """
+  familyId: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`email` of type `String!`
+  """
+  email: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`family` of type `Family!`
+  """
+  family: Family_Order
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUserId` of type `String`
+  """
+  acceptedUserId: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedByUserId` of type `String!`
+  """
+  invitedByUserId: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUser` of type `User`
+  """
+  acceptedUser: User_Order
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedBy` of type `User!`
+  """
+  invitedBy: User_Order
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt` of type `Timestamp`
+  """
+  respondedAt: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`status` of type `String!`
+  """
+  status: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`acceptedUserId_count` of type `Int!`
+  """
+  acceptedUserId_count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`email_count` of type `Int!`
+  """
+  email_count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`familyId_count` of type `Int!`
+  """
+  familyId_count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`invitedByUserId_count` of type `Int!`
+  """
+  invitedByUserId_count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt_count` of type `Int!`
+  """
+  respondedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt_min` of type `Timestamp`
+  """
+  respondedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `FamilyPartner`.`respondedAt_max` of type `Timestamp`
+  """
+  respondedAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'Pregnancy'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input Pregnancy_Data {
+  """
+  ✨ Generated from Field `Pregnancy`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Pregnancy`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Pregnancy`.`userId` of type `String!`
+  """
+  userId: String
+  """
+  ✨ `_expr` server value variant of `userId` (✨ Generated from Field `Pregnancy`.`userId` of type `String!`)
+  """
+  userId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Pregnancy`.`user` of type `User!`
+  """
+  user: User_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt` of type `Timestamp`
+  """
+  birthCompletedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `birthCompletedAt` (✨ Generated from Field `Pregnancy`.`birthCompletedAt` of type `Timestamp`)
+  """
+  birthCompletedAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `birthCompletedAt` (✨ Generated from Field `Pregnancy`.`birthCompletedAt` of type `Timestamp`)
+  """
+  birthCompletedAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `birthCompletedAt` (✨ Generated from Field `Pregnancy`.`birthCompletedAt` of type `Timestamp`)
+  """
+  birthCompletedAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate` of type `Timestamp!`
+  """
+  dueDate: Timestamp
+  """
+  ✨ `_expr` server value variant of `dueDate` (✨ Generated from Field `Pregnancy`.`dueDate` of type `Timestamp!`)
+  """
+  dueDate_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `dueDate` (✨ Generated from Field `Pregnancy`.`dueDate` of type `Timestamp!`)
+  """
+  dueDate_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `dueDate` (✨ Generated from Field `Pregnancy`.`dueDate` of type `Timestamp!`)
+  """
+  dueDate_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate` of type `Timestamp!`
+  """
+  startDate: Timestamp
+  """
+  ✨ `_expr` server value variant of `startDate` (✨ Generated from Field `Pregnancy`.`startDate` of type `Timestamp!`)
+  """
+  startDate_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `startDate` (✨ Generated from Field `Pregnancy`.`startDate` of type `Timestamp!`)
+  """
+  startDate_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `startDate` (✨ Generated from Field `Pregnancy`.`startDate` of type `Timestamp!`)
+  """
+  startDate_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `Pregnancy`.`status` of type `String!`
+  """
+  status: String
+  """
+  ✨ `_expr` server value variant of `status` (✨ Generated from Field `Pregnancy`.`status` of type `String!`)
+  """
+  status_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'Pregnancy'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Pregnancy_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [Pregnancy_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: Pregnancy_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [Pregnancy_Filter!]
+  """
+  ✨ Generated from Field `Pregnancy`.`id` of type `String!`
+  """
+  id: String_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`userId` of type `String!`
+  """
+  userId: String_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`user` of type `User!`
+  """
+  user: User_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt` of type `Timestamp`
+  """
+  birthCompletedAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate` of type `Timestamp!`
+  """
+  dueDate: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate` of type `Timestamp!`
+  """
+  startDate: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`status` of type `String!`
+  """
+  status: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'Pregnancy'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input Pregnancy_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [Pregnancy_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: Pregnancy_Filter
+}
+"""
+✨ Generated having input type for table 'Pregnancy'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input Pregnancy_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [Pregnancy_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: Pregnancy_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [Pregnancy_Having!]
+  """
+  ✨ Generated from Field `Pregnancy`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt_count` of type `Int!`
+  """
+  birthCompletedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate_count` of type `Int!`
+  """
+  dueDate_count: Int_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate_count` of type `Int!`
+  """
+  startDate_count: Int_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`status_count` of type `Int!`
+  """
+  status_count: Int_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`userId_count` of type `Int!`
+  """
+  userId_count: Int_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt_min` of type `Timestamp`
+  """
+  birthCompletedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate_min` of type `Timestamp`
+  """
+  dueDate_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate_min` of type `Timestamp`
+  """
+  startDate_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt_max` of type `Timestamp`
+  """
+  birthCompletedAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate_max` of type `Timestamp`
+  """
+  dueDate_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate_max` of type `Timestamp`
+  """
+  startDate_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'Pregnancy'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input Pregnancy_Key {
+  """
+  ✨ Generated from Field `Pregnancy`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `Pregnancy`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'Pregnancy'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input Pregnancy_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: Pregnancy_Filter
+}
+"""
+✨ Generated order input type for table 'Pregnancy'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input Pregnancy_Order {
+  """
+  ✨ Generated from Field `Pregnancy`.`id` of type `String!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`userId` of type `String!`
+  """
+  userId: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`user` of type `User!`
+  """
+  user: User_Order
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt` of type `Timestamp`
+  """
+  birthCompletedAt: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate` of type `Timestamp!`
+  """
+  dueDate: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate` of type `Timestamp!`
+  """
+  startDate: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`status` of type `String!`
+  """
+  status: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt_count` of type `Int!`
+  """
+  birthCompletedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate_count` of type `Int!`
+  """
+  dueDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate_count` of type `Int!`
+  """
+  startDate_count: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`userId_count` of type `Int!`
+  """
+  userId_count: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt_min` of type `Timestamp`
+  """
+  birthCompletedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate_min` of type `Timestamp`
+  """
+  dueDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate_min` of type `Timestamp`
+  """
+  startDate_min: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`birthCompletedAt_max` of type `Timestamp`
+  """
+  birthCompletedAt_max: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`dueDate_max` of type `Timestamp`
+  """
+  dueDate_max: OrderDirection
+  """
+  ✨ Generated from Field `Pregnancy`.`startDate_max` of type `Timestamp`
+  """
+  startDate_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'TrackerRecord'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input TrackerRecord_Data {
+  """
+  ✨ Generated from Field `TrackerRecord`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `TrackerRecord`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`babyId` of type `String`
+  """
+  babyId: String
+  """
+  ✨ `_expr` server value variant of `babyId` (✨ Generated from Field `TrackerRecord`.`babyId` of type `String`)
+  """
+  babyId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdByUserId` of type `String`
+  """
+  createdByUserId: String
+  """
+  ✨ `_expr` server value variant of `createdByUserId` (✨ Generated from Field `TrackerRecord`.`createdByUserId` of type `String`)
+  """
+  createdByUserId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`familyId` of type `String`
+  """
+  familyId: String
+  """
+  ✨ `_expr` server value variant of `familyId` (✨ Generated from Field `TrackerRecord`.`familyId` of type `String`)
+  """
+  familyId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`baby` of type `Baby`
+  """
+  baby: Baby_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdBy` of type `User`
+  """
+  createdBy: User_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`family` of type `Family`
+  """
+  family: Family_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `TrackerRecord`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `TrackerRecord`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `TrackerRecord`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt` of type `Timestamp`
+  """
+  deletedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `deletedAt` (✨ Generated from Field `TrackerRecord`.`deletedAt` of type `Timestamp`)
+  """
+  deletedAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `deletedAt` (✨ Generated from Field `TrackerRecord`.`deletedAt` of type `Timestamp`)
+  """
+  deletedAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `deletedAt` (✨ Generated from Field `TrackerRecord`.`deletedAt` of type `Timestamp`)
+  """
+  deletedAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`note` of type `String`
+  """
+  note: String
+  """
+  ✨ `_expr` server value variant of `note` (✨ Generated from Field `TrackerRecord`.`note` of type `String`)
+  """
+  note_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt` of type `Timestamp!`
+  """
+  occurredAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `occurredAt` (✨ Generated from Field `TrackerRecord`.`occurredAt` of type `Timestamp!`)
+  """
+  occurredAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `occurredAt` (✨ Generated from Field `TrackerRecord`.`occurredAt` of type `Timestamp!`)
+  """
+  occurredAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `occurredAt` (✨ Generated from Field `TrackerRecord`.`occurredAt` of type `Timestamp!`)
+  """
+  occurredAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`title` of type `String!`
+  """
+  title: String
+  """
+  ✨ `_expr` server value variant of `title` (✨ Generated from Field `TrackerRecord`.`title` of type `String!`)
+  """
+  title_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`type` of type `String!`
+  """
+  type: String
+  """
+  ✨ `_expr` server value variant of `type` (✨ Generated from Field `TrackerRecord`.`type` of type `String!`)
+  """
+  type_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt` of type `Timestamp!`
+  """
+  updatedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `updatedAt` (✨ Generated from Field `TrackerRecord`.`updatedAt` of type `Timestamp!`)
+  """
+  updatedAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `updatedAt` (✨ Generated from Field `TrackerRecord`.`updatedAt` of type `Timestamp!`)
+  """
+  updatedAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `updatedAt` (✨ Generated from Field `TrackerRecord`.`updatedAt` of type `Timestamp!`)
+  """
+  updatedAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `TrackerRecord`.`value` of type `String`
+  """
+  value: String
+  """
+  ✨ `_expr` server value variant of `value` (✨ Generated from Field `TrackerRecord`.`value` of type `String`)
+  """
+  value_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'TrackerRecord'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input TrackerRecord_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [TrackerRecord_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: TrackerRecord_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [TrackerRecord_Filter!]
+  """
+  ✨ Generated from Field `TrackerRecord`.`id` of type `String!`
+  """
+  id: String_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`babyId` of type `String`
+  """
+  babyId: String_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdByUserId` of type `String`
+  """
+  createdByUserId: String_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`familyId` of type `String`
+  """
+  familyId: String_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`baby` of type `Baby`
+  """
+  baby: Baby_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdBy` of type `User`
+  """
+  createdBy: User_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`family` of type `Family`
+  """
+  family: Family_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt` of type `Timestamp`
+  """
+  deletedAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`note` of type `String`
+  """
+  note: String_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt` of type `Timestamp!`
+  """
+  occurredAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`title` of type `String!`
+  """
+  title: String_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`type` of type `String!`
+  """
+  type: String_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt` of type `Timestamp!`
+  """
+  updatedAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`value` of type `String`
+  """
+  value: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'TrackerRecord'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input TrackerRecord_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [TrackerRecord_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: TrackerRecord_Filter
+}
+"""
+✨ Generated having input type for table 'TrackerRecord'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input TrackerRecord_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [TrackerRecord_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: TrackerRecord_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [TrackerRecord_Having!]
+  """
+  ✨ Generated from Field `TrackerRecord`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`babyId_count` of type `Int!`
+  """
+  babyId_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdByUserId_count` of type `Int!`
+  """
+  createdByUserId_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt_count` of type `Int!`
+  """
+  deletedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`familyId_count` of type `Int!`
+  """
+  familyId_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`note_count` of type `Int!`
+  """
+  note_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt_count` of type `Int!`
+  """
+  occurredAt_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`title_count` of type `Int!`
+  """
+  title_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`type_count` of type `Int!`
+  """
+  type_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt_count` of type `Int!`
+  """
+  updatedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`value_count` of type `Int!`
+  """
+  value_count: Int_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt_min` of type `Timestamp`
+  """
+  deletedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt_min` of type `Timestamp`
+  """
+  occurredAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt_min` of type `Timestamp`
+  """
+  updatedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt_max` of type `Timestamp`
+  """
+  deletedAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt_max` of type `Timestamp`
+  """
+  occurredAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt_max` of type `Timestamp`
+  """
+  updatedAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'TrackerRecord'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input TrackerRecord_Key {
+  """
+  ✨ Generated from Field `TrackerRecord`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `TrackerRecord`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'TrackerRecord'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input TrackerRecord_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: TrackerRecord_Filter
+}
+"""
+✨ Generated order input type for table 'TrackerRecord'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input TrackerRecord_Order {
+  """
+  ✨ Generated from Field `TrackerRecord`.`id` of type `String!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`babyId` of type `String`
+  """
+  babyId: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdByUserId` of type `String`
+  """
+  createdByUserId: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`familyId` of type `String`
+  """
+  familyId: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`baby` of type `Baby`
+  """
+  baby: Baby_Order
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdBy` of type `User`
+  """
+  createdBy: User_Order
+  """
+  ✨ Generated from Field `TrackerRecord`.`family` of type `Family`
+  """
+  family: Family_Order
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt` of type `Timestamp`
+  """
+  deletedAt: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`note` of type `String`
+  """
+  note: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt` of type `Timestamp!`
+  """
+  occurredAt: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`title` of type `String!`
+  """
+  title: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`type` of type `String!`
+  """
+  type: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt` of type `Timestamp!`
+  """
+  updatedAt: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`value` of type `String`
+  """
+  value: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`babyId_count` of type `Int!`
+  """
+  babyId_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdByUserId_count` of type `Int!`
+  """
+  createdByUserId_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt_count` of type `Int!`
+  """
+  deletedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`familyId_count` of type `Int!`
+  """
+  familyId_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`note_count` of type `Int!`
+  """
+  note_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt_count` of type `Int!`
+  """
+  occurredAt_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`title_count` of type `Int!`
+  """
+  title_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`type_count` of type `Int!`
+  """
+  type_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt_count` of type `Int!`
+  """
+  updatedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`value_count` of type `Int!`
+  """
+  value_count: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt_min` of type `Timestamp`
+  """
+  deletedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt_min` of type `Timestamp`
+  """
+  occurredAt_min: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt_min` of type `Timestamp`
+  """
+  updatedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`deletedAt_max` of type `Timestamp`
+  """
+  deletedAt_max: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`occurredAt_max` of type `Timestamp`
+  """
+  occurredAt_max: OrderDirection
+  """
+  ✨ Generated from Field `TrackerRecord`.`updatedAt_max` of type `Timestamp`
+  """
+  updatedAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'User'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input User_Data {
+  """
+  ✨ Generated from Field `User`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `User`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`avatarUrl` of type `String`
+  """
+  avatarUrl: String
+  """
+  ✨ `_expr` server value variant of `avatarUrl` (✨ Generated from Field `User`.`avatarUrl` of type `String`)
+  """
+  avatarUrl_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`birthDate` of type `Timestamp`
+  """
+  birthDate: Timestamp
+  """
+  ✨ `_expr` server value variant of `birthDate` (✨ Generated from Field `User`.`birthDate` of type `Timestamp`)
+  """
+  birthDate_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `birthDate` (✨ Generated from Field `User`.`birthDate` of type `Timestamp`)
+  """
+  birthDate_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `birthDate` (✨ Generated from Field `User`.`birthDate` of type `Timestamp`)
+  """
+  birthDate_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `User`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String`
+  """
+  displayName: String
+  """
+  ✨ `_expr` server value variant of `displayName` (✨ Generated from Field `User`.`displayName` of type `String`)
+  """
+  displayName_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`email` of type `String!`
+  """
+  email: String
+  """
+  ✨ `_expr` server value variant of `email` (✨ Generated from Field `User`.`email` of type `String!`)
+  """
+  email_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`language` of type `String!`
+  """
+  language: String
+  """
+  ✨ `_expr` server value variant of `language` (✨ Generated from Field `User`.`language` of type `String!`)
+  """
+  language_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`phone` of type `String`
+  """
+  phone: String
+  """
+  ✨ `_expr` server value variant of `phone` (✨ Generated from Field `User`.`phone` of type `String`)
+  """
+  phone_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`role` of type `String`
+  """
+  role: String
+  """
+  ✨ `_expr` server value variant of `role` (✨ Generated from Field `User`.`role` of type `String`)
+  """
+  role_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `User`.`theme` of type `String!`
+  """
+  theme: String
+  """
+  ✨ `_expr` server value variant of `theme` (✨ Generated from Field `User`.`theme` of type `String!`)
+  """
+  theme_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'User'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input User_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [User_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: User_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [User_Filter!]
+  """
+  ✨ Generated from Field `User`.`id` of type `String!`
+  """
+  id: String_Filter
+  """
+  ✨ Generated from Field `User`.`avatarUrl` of type `String`
+  """
+  avatarUrl: String_Filter
+  """
+  ✨ Generated from Field `User`.`birthDate` of type `Timestamp`
+  """
+  birthDate: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String`
+  """
+  displayName: String_Filter
+  """
+  ✨ Generated from Field `User`.`email` of type `String!`
+  """
+  email: String_Filter
+  """
+  ✨ Generated from Field `User`.`language` of type `String!`
+  """
+  language: String_Filter
+  """
+  ✨ Generated from Field `User`.`phone` of type `String`
+  """
+  phone: String_Filter
+  """
+  ✨ Generated from Field `User`.`role` of type `String`
+  """
+  role: String_Filter
+  """
+  ✨ Generated from Field `User`.`theme` of type `String!`
+  """
+  theme: String_Filter
+  """
+  ✨ Generated from Field `User`.`appNotifications_on_user` of type `[AppNotification!]!`
+  """
+  appNotifications_on_user: AppNotification_ListFilter
+  """
+  ✨ Generated from Field `User`.`families_on_owner` of type `[Family!]!`
+  """
+  families_on_owner: Family_ListFilter
+  """
+  ✨ Generated from Field `User`.`familyPartners_on_acceptedUser` of type `[FamilyPartner!]!`
+  """
+  familyPartners_on_acceptedUser: FamilyPartner_ListFilter
+  """
+  ✨ Generated from Field `User`.`familyPartners_on_invitedBy` of type `[FamilyPartner!]!`
+  """
+  familyPartners_on_invitedBy: FamilyPartner_ListFilter
+  """
+  ✨ Generated from Field `User`.`pregnancies_on_user` of type `[Pregnancy!]!`
+  """
+  pregnancies_on_user: Pregnancy_ListFilter
+  """
+  ✨ Generated from Field `User`.`trackerRecords_on_createdBy` of type `[TrackerRecord!]!`
+  """
+  trackerRecords_on_createdBy: TrackerRecord_ListFilter
+}
+"""
+✨ Generated first-row input type for table 'User'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input User_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [User_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: User_Filter
+}
+"""
+✨ Generated having input type for table 'User'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input User_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [User_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: User_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [User_Having!]
+  """
+  ✨ Generated from Field `User`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`avatarUrl_count` of type `Int!`
+  """
+  avatarUrl_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`birthDate_count` of type `Int!`
+  """
+  birthDate_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`displayName_count` of type `Int!`
+  """
+  displayName_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`email_count` of type `Int!`
+  """
+  email_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`language_count` of type `Int!`
+  """
+  language_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`phone_count` of type `Int!`
+  """
+  phone_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`role_count` of type `Int!`
+  """
+  role_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`theme_count` of type `Int!`
+  """
+  theme_count: Int_Filter
+  """
+  ✨ Generated from Field `User`.`birthDate_min` of type `Timestamp`
+  """
+  birthDate_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`birthDate_max` of type `Timestamp`
+  """
+  birthDate_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `User`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'User'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input User_Key {
+  """
+  ✨ Generated from Field `User`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `User`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'User'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input User_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: User_Filter
+}
+"""
+✨ Generated order input type for table 'User'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input User_Order {
+  """
+  ✨ Generated from Field `User`.`id` of type `String!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `User`.`avatarUrl` of type `String`
+  """
+  avatarUrl: OrderDirection
+  """
+  ✨ Generated from Field `User`.`birthDate` of type `Timestamp`
+  """
+  birthDate: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `User`.`displayName` of type `String`
+  """
+  displayName: OrderDirection
+  """
+  ✨ Generated from Field `User`.`email` of type `String!`
+  """
+  email: OrderDirection
+  """
+  ✨ Generated from Field `User`.`language` of type `String!`
+  """
+  language: OrderDirection
+  """
+  ✨ Generated from Field `User`.`phone` of type `String`
+  """
+  phone: OrderDirection
+  """
+  ✨ Generated from Field `User`.`role` of type `String`
+  """
+  role: OrderDirection
+  """
+  ✨ Generated from Field `User`.`theme` of type `String!`
+  """
+  theme: OrderDirection
+  """
+  ✨ Generated from Field `User`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`avatarUrl_count` of type `Int!`
+  """
+  avatarUrl_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`birthDate_count` of type `Int!`
+  """
+  birthDate_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`displayName_count` of type `Int!`
+  """
+  displayName_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`email_count` of type `Int!`
+  """
+  email_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`language_count` of type `Int!`
+  """
+  language_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`phone_count` of type `Int!`
+  """
+  phone_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`role_count` of type `Int!`
+  """
+  role_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`theme_count` of type `Int!`
+  """
+  theme_count: OrderDirection
+  """
+  ✨ Generated from Field `User`.`birthDate_min` of type `Timestamp`
+  """
+  birthDate_min: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `User`.`birthDate_max` of type `Timestamp`
+  """
+  birthDate_max: OrderDirection
+  """
+  ✨ Generated from Field `User`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+}
+"""
+✨ Generated data input type for table 'VaccineEvent'. It includes all necessary fields for creating or upserting rows into table.
+"""
+input VaccineEvent_Data {
+  """
+  ✨ Generated from Field `VaccineEvent`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `VaccineEvent`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`babyId` of type `String!`
+  """
+  babyId: String
+  """
+  ✨ `_expr` server value variant of `babyId` (✨ Generated from Field `VaccineEvent`.`babyId` of type `String!`)
+  """
+  babyId_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`baby` of type `Baby!`
+  """
+  baby: Baby_Key @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt` of type `Timestamp`
+  """
+  completedAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `completedAt` (✨ Generated from Field `VaccineEvent`.`completedAt` of type `Timestamp`)
+  """
+  completedAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `completedAt` (✨ Generated from Field `VaccineEvent`.`completedAt` of type `Timestamp`)
+  """
+  completedAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `completedAt` (✨ Generated from Field `VaccineEvent`.`completedAt` of type `Timestamp`)
+  """
+  completedAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp
+  """
+  ✨ `_expr` server value variant of `createdAt` (✨ Generated from Field `VaccineEvent`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `createdAt` (✨ Generated from Field `VaccineEvent`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `createdAt` (✨ Generated from Field `VaccineEvent`.`createdAt` of type `Timestamp!`)
+  """
+  createdAt_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`dose` of type `String!`
+  """
+  dose: String
+  """
+  ✨ `_expr` server value variant of `dose` (✨ Generated from Field `VaccineEvent`.`dose` of type `String!`)
+  """
+  dose_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate` of type `Timestamp!`
+  """
+  dueDate: Timestamp
+  """
+  ✨ `_expr` server value variant of `dueDate` (✨ Generated from Field `VaccineEvent`.`dueDate` of type `Timestamp!`)
+  """
+  dueDate_expr: Timestamp_Expr @fdc_forbiddenInVariables
+  """
+  ✨ `_time` server value variant of `dueDate` (✨ Generated from Field `VaccineEvent`.`dueDate` of type `Timestamp!`)
+  """
+  dueDate_time: Timestamp_Relative @fdc_forbiddenInVariables
+  """
+  ✨ `_update` server value variant of `dueDate` (✨ Generated from Field `VaccineEvent`.`dueDate` of type `Timestamp!`)
+  """
+  dueDate_update: [Timestamp_Update!] @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`notes` of type `String`
+  """
+  notes: String
+  """
+  ✨ `_expr` server value variant of `notes` (✨ Generated from Field `VaccineEvent`.`notes` of type `String`)
+  """
+  notes_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`status` of type `String!`
+  """
+  status: String
+  """
+  ✨ `_expr` server value variant of `status` (✨ Generated from Field `VaccineEvent`.`status` of type `String!`)
+  """
+  status_expr: String_Expr @fdc_forbiddenInVariables
+  """
+  ✨ Generated from Field `VaccineEvent`.`title` of type `String!`
+  """
+  title: String
+  """
+  ✨ `_expr` server value variant of `title` (✨ Generated from Field `VaccineEvent`.`title` of type `String!`)
+  """
+  title_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated filter input type for table 'VaccineEvent'. This input allows filtering objects using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input VaccineEvent_Filter {
+  """
+  Apply multiple filter conditions using `AND` logic.
+  """
+  _and: [VaccineEvent_Filter!]
+  """
+  Negate the result of the provided filter condition.
+  """
+  _not: VaccineEvent_Filter
+  """
+  Apply multiple filter conditions using `OR` logic.
+  """
+  _or: [VaccineEvent_Filter!]
+  """
+  ✨ Generated from Field `VaccineEvent`.`id` of type `String!`
+  """
+  id: String_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`babyId` of type `String!`
+  """
+  babyId: String_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`baby` of type `Baby!`
+  """
+  baby: Baby_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt` of type `Timestamp`
+  """
+  completedAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`dose` of type `String!`
+  """
+  dose: String_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate` of type `Timestamp!`
+  """
+  dueDate: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`notes` of type `String`
+  """
+  notes: String_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`status` of type `String!`
+  """
+  status: String_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`title` of type `String!`
+  """
+  title: String_Filter
+}
+"""
+✨ Generated first-row input type for table 'VaccineEvent'. This input selects the first row matching the filter criteria, ordered according to the specified conditions.
+"""
+input VaccineEvent_FirstRow {
+  """
+  Order the result by the specified fields.
+  """
+  orderBy: [VaccineEvent_Order!]
+  """
+  Filters rows based on the specified conditions.
+  """
+  where: VaccineEvent_Filter
+}
+"""
+✨ Generated having input type for table 'VaccineEvent'. This input allows you to filter groups during aggregate queries using various conditions. Use `_or`, `_and`, and `_not` to compose complex filters.
+"""
+input VaccineEvent_Having {
+  """
+  Apply multiple Having conditions using `AND` logic.
+  """
+  _and: [VaccineEvent_Having!]
+  """
+  Whether to apply DISTINCT to the aggregate function.
+  """
+  _distinct: Boolean
+  """
+  Negate the result of the provided Having condition.
+  """
+  _not: VaccineEvent_Having
+  """
+  Apply multiple Having conditions using `OR` logic.
+  """
+  _or: [VaccineEvent_Having!]
+  """
+  ✨ Generated from Field `VaccineEvent`.`_count` of type `Int!`
+  """
+  _count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`babyId_count` of type `Int!`
+  """
+  babyId_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt_count` of type `Int!`
+  """
+  completedAt_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`dose_count` of type `Int!`
+  """
+  dose_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate_count` of type `Int!`
+  """
+  dueDate_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`id_count` of type `Int!`
+  """
+  id_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`notes_count` of type `Int!`
+  """
+  notes_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`status_count` of type `Int!`
+  """
+  status_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`title_count` of type `Int!`
+  """
+  title_count: Int_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt_min` of type `Timestamp`
+  """
+  completedAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate_min` of type `Timestamp`
+  """
+  dueDate_min: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt_max` of type `Timestamp`
+  """
+  completedAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: Timestamp_Filter
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate_max` of type `Timestamp`
+  """
+  dueDate_max: Timestamp_Filter
+}
+"""
+✨ Generated key input type for table 'VaccineEvent'. It represents the primary key fields used to uniquely identify a row in the table.
+"""
+input VaccineEvent_Key {
+  """
+  ✨ Generated from Field `VaccineEvent`.`id` of type `String!`
+  """
+  id: String
+  """
+  ✨ `_expr` server value variant of `id` (✨ Generated from Field `VaccineEvent`.`id` of type `String!`)
+  """
+  id_expr: String_Expr @fdc_forbiddenInVariables
+}
+"""
+✨ Generated list filter input type for table 'VaccineEvent'. This input applies filtering logic based on the count or existence of related objects that matches certain criteria.
+"""
+input VaccineEvent_ListFilter {
+  """
+  The desired number of objects that match the condition (defaults to at least one).
+  """
+  count: Int_Filter = {gt:0}
+  """
+  Condition of the related objects to filter for.
+  """
+  exist: VaccineEvent_Filter
+}
+"""
+✨ Generated order input type for table 'VaccineEvent'. This input defines the sorting order of rows in query results based on one or more fields.
+"""
+input VaccineEvent_Order {
+  """
+  ✨ Generated from Field `VaccineEvent`.`id` of type `String!`
+  """
+  id: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`babyId` of type `String!`
+  """
+  babyId: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`baby` of type `Baby!`
+  """
+  baby: Baby_Order
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt` of type `Timestamp`
+  """
+  completedAt: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt` of type `Timestamp!`
+  """
+  createdAt: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`dose` of type `String!`
+  """
+  dose: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate` of type `Timestamp!`
+  """
+  dueDate: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`notes` of type `String`
+  """
+  notes: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`status` of type `String!`
+  """
+  status: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`title` of type `String!`
+  """
+  title: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`_count` of type `Int!`
+  """
+  _count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`babyId_count` of type `Int!`
+  """
+  babyId_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt_count` of type `Int!`
+  """
+  completedAt_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt_count` of type `Int!`
+  """
+  createdAt_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`dose_count` of type `Int!`
+  """
+  dose_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate_count` of type `Int!`
+  """
+  dueDate_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`id_count` of type `Int!`
+  """
+  id_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`notes_count` of type `Int!`
+  """
+  notes_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`status_count` of type `Int!`
+  """
+  status_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`title_count` of type `Int!`
+  """
+  title_count: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt_min` of type `Timestamp`
+  """
+  completedAt_min: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt_min` of type `Timestamp`
+  """
+  createdAt_min: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate_min` of type `Timestamp`
+  """
+  dueDate_min: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`completedAt_max` of type `Timestamp`
+  """
+  completedAt_max: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`createdAt_max` of type `Timestamp`
+  """
+  createdAt_max: OrderDirection
+  """
+  ✨ Generated from Field `VaccineEvent`.`dueDate_max` of type `Timestamp`
+  """
+  dueDate_max: OrderDirection
+}

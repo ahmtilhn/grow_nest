@@ -1,0 +1,456 @@
+extend type Query {
+  """
+  ✨ Look up a single `AppNotification` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  appNotification(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: AppNotification_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: AppNotification_FirstRow
+  ): AppNotification @fdc_generated(from: "AppNotification", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Baby` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  baby(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Baby_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Baby_FirstRow
+  ): Baby @fdc_generated(from: "Baby", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Family` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  family(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Family_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Family_FirstRow
+  ): Family @fdc_generated(from: "Family", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `FamilyPartner` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  familyPartner(
+    """
+    The key used to identify the object.
+    """
+    key: FamilyPartner_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: FamilyPartner_FirstRow
+  ): FamilyPartner @fdc_generated(from: "FamilyPartner", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Pregnancy` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  pregnancy(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Pregnancy_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Pregnancy_FirstRow
+  ): Pregnancy @fdc_generated(from: "Pregnancy", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `TrackerRecord` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  trackerRecord(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: TrackerRecord_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: TrackerRecord_FirstRow
+  ): TrackerRecord @fdc_generated(from: "TrackerRecord", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `User` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  user(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: User_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: User_FirstRow
+  ): User @fdc_generated(from: "User", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `VaccineEvent` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  vaccineEvent(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: VaccineEvent_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: VaccineEvent_FirstRow
+  ): VaccineEvent @fdc_generated(from: "VaccineEvent", purpose: QUERY_SINGLE)
+  """
+  ✨ List `AppNotification` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  appNotifications(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: AppNotification_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [AppNotification_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: AppNotification_Having
+  ): [AppNotification!]! @fdc_generated(from: "AppNotification", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Baby` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  babies(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Baby_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Baby_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Baby_Having
+  ): [Baby!]! @fdc_generated(from: "Baby", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Family` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  families(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Family_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Family_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Family_Having
+  ): [Family!]! @fdc_generated(from: "Family", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `FamilyPartner` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  familyPartners(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: FamilyPartner_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [FamilyPartner_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: FamilyPartner_Having
+  ): [FamilyPartner!]! @fdc_generated(from: "FamilyPartner", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Pregnancy` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  pregnancies(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Pregnancy_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Pregnancy_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Pregnancy_Having
+  ): [Pregnancy!]! @fdc_generated(from: "Pregnancy", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `TrackerRecord` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  trackerRecords(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: TrackerRecord_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [TrackerRecord_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: TrackerRecord_Having
+  ): [TrackerRecord!]! @fdc_generated(from: "TrackerRecord", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `User` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  users(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: User_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [User_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: User_Having
+  ): [User!]! @fdc_generated(from: "User", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `VaccineEvent` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  vaccineEvents(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: VaccineEvent_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [VaccineEvent_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: VaccineEvent_Having
+  ): [VaccineEvent!]! @fdc_generated(from: "VaccineEvent", purpose: QUERY_MULTIPLE)
+}

@@ -1,0 +1,830 @@
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:grow_nest/app/app_controller.dart';
+import 'package:grow_nest/core/firebase/firebase_sync_service.dart';
+import 'package:grow_nest/core/notifications/notification_service.dart';
+import 'package:grow_nest/core/sync/remote_sync_models.dart';
+import 'package:grow_nest/data/local/app_database.dart'
+    hide Family, FamilyInvite, TrackerRecord, VaccineEvent;
+import 'package:grow_nest/data/repositories/app_repository.dart';
+import 'package:grow_nest/domain/entities/app_entities.dart';
+
+void main() {
+  test(
+    'partner invite waits for invited user and joins family on accept',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+
+      await repository.loginLocal('sender@example.com', '123456');
+      await repository.completeBabyOnboarding(
+        parentName: 'Sender Parent',
+        babyName: 'Aylin',
+        birthDate: DateTime(2026, 1, 1),
+      );
+
+      await repository.loginLocal('invitee@example.com', '123456');
+      await repository.loginLocal('sender@example.com', '123456');
+      await repository.addFamilyPartner('invitee@example.com');
+
+      final senderSnapshot = await repository.loadSnapshot();
+      expect(
+        senderSnapshot.notifications.where(
+          (item) => item.type == 'family_invite',
+        ),
+        isEmpty,
+      );
+      expect(senderSnapshot.invites.single.status, FamilyInviteStatus.pending);
+
+      await repository.loginLocal('invitee@example.com', '123456');
+      final inviteeSnapshot = await repository.loadSnapshot();
+
+      expect(inviteeSnapshot.family, isNull);
+      expect(inviteeSnapshot.invites.single.status, FamilyInviteStatus.pending);
+      expect(inviteeSnapshot.notifications.single.title, 'Aile daveti');
+      expect(
+        inviteeSnapshot.notifications.single.body,
+        contains('Sender Parent'),
+      );
+
+      await repository.acceptFamilyInvite(inviteeSnapshot.invites.single.id);
+      final acceptedSnapshot = await repository.loadSnapshot();
+
+      expect(acceptedSnapshot.family, isNotNull);
+      expect(
+        acceptedSnapshot.family!.partnerUserIds,
+        contains('invitee@example.com'),
+      );
+      expect(
+        acceptedSnapshot.invites.single.status,
+        FamilyInviteStatus.accepted,
+      );
+    },
+  );
+
+  test(
+    'controller sends invite to Firebase before creating local success',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService();
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('sender@example.com', '123456');
+      await controller.completeBabyOnboarding(
+        parentName: 'Sender Parent',
+        babyName: 'Aylin',
+        birthDate: DateTime(2026, 1, 1),
+      );
+      remote.calls.clear();
+
+      await controller.addFamilyPartner('invitee@example.com');
+
+      expect(
+        remote.calls,
+        containsAllInOrder([
+          'syncUser:sender@example.com',
+          'syncFamily:family-email-sender-example-com',
+          'syncBaby:baby-email-sender-example-com',
+          'addFamilyPartner:family-email-sender-example-com:invitee@example.com',
+        ]),
+      );
+      expect(
+        controller.snapshot.invites.single.invitedEmail,
+        'invitee@example.com',
+      );
+    },
+  );
+
+  test(
+    'controller does not create local invite when Firebase delivery fails',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService()..failAddFamilyPartner = true;
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('sender@example.com', '123456');
+      await controller.completeBabyOnboarding(
+        parentName: 'Sender Parent',
+        babyName: 'Aylin',
+        birthDate: DateTime(2026, 1, 1),
+      );
+
+      await expectLater(
+        controller.addFamilyPartner('invitee@example.com'),
+        throwsA(isA<AppControllerException>()),
+      );
+      expect(controller.snapshot.invites, isEmpty);
+    },
+  );
+
+  test('owner can update permissions for a single invited account', () async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = AppRepository(database);
+    await repository.seedContent();
+    final remote = _FakeRemoteSyncService();
+    final controller = AppController(repository, syncService: remote);
+
+    await controller.loginLocal('sender@example.com', '123456');
+    await controller.completeBabyOnboarding(
+      parentName: 'Sender Parent',
+      babyName: 'Aylin',
+      birthDate: DateTime(2026, 1, 1),
+    );
+    await controller.addFamilyPartner(
+      'invitee@example.com',
+      roleLabel: 'Görüntüleyici',
+      permissions: FamilyPermissionSets.viewOnly,
+    );
+
+    final invite = controller.snapshot.invites.single;
+    await controller.updateFamilyInvitePermissions(
+      inviteId: invite.id,
+      displayName: 'Gece Bakıcısı',
+      roleLabel: 'Bakıcı',
+      permissions: const [
+        FamilyPermission.viewBaby,
+        FamilyPermission.viewSleep,
+        FamilyPermission.manageSleep,
+      ],
+    );
+
+    final updated = controller.snapshot.invites.single;
+    expect(updated.invitedDisplayName, 'Gece Bakıcısı');
+    expect(updated.roleLabel, 'Bakıcı');
+    expect(updated.permissions, contains(FamilyPermission.manageSleep));
+    expect(updated.permissions, isNot(contains(FamilyPermission.addFeeding)));
+    expect(
+      remote.calls,
+      contains('updateFamilyInvitePermissions:${invite.id}'),
+    );
+  });
+
+  test(
+    'accepted partner refresh sees shared family baby and tracker records',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService()
+        ..families = [
+          RemoteFamilySummary(
+            id: 'family-sender',
+            ownerUserId: 'sender-uid',
+            activeBabyId: 'baby-sender',
+            createdAt: DateTime(2026, 1, 1),
+            partnerEmails: const ['invitee@example.com'],
+            babies: [
+              RemoteBabySummary(
+                id: 'baby-sender',
+                familyId: 'family-sender',
+                name: 'Aylin',
+                birthDate: DateTime(2026, 1, 1),
+                createdAt: DateTime(2026, 1, 1),
+              ),
+            ],
+            records: [
+              RemoteTrackerRecordSummary(
+                id: 'record-shared',
+                type: 'feeding',
+                title: 'Biberon',
+                familyId: 'family-sender',
+                babyId: 'baby-sender',
+                value: '90 ml',
+                createdByUserId: 'sender-uid',
+                createdByName: 'Sender Parent',
+                occurredAt: DateTime(2026, 2, 1, 8),
+                createdAt: DateTime(2026, 2, 1, 8),
+                updatedAt: DateTime(2026, 2, 1, 8),
+              ),
+            ],
+          ),
+        ];
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('invitee@example.com', '123456');
+      await controller.refreshRemoteFamilies();
+
+      expect(controller.snapshot.family?.id, 'family-sender');
+      expect(controller.snapshot.baby?.name, 'Aylin');
+      expect(controller.snapshot.records.single.id, 'record-shared');
+      expect(controller.snapshot.records.single.title, 'Biberon');
+      expect(controller.snapshot.records.single.createdByName, 'Sender Parent');
+    },
+  );
+
+  test(
+    'invitee with an existing local family switches to the shared family and writes into shared scope',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService()
+        ..families = [
+          RemoteFamilySummary(
+            id: 'family-sender',
+            ownerUserId: 'sender-uid',
+            activeBabyId: 'baby-sender',
+            createdAt: DateTime(2026, 1, 1),
+            partnerEmails: const ['invitee@example.com'],
+            babies: [
+              RemoteBabySummary(
+                id: 'baby-sender',
+                familyId: 'family-sender',
+                name: 'Aylin',
+                birthDate: DateTime(2026, 1, 1),
+                createdAt: DateTime(2026, 1, 1),
+              ),
+            ],
+          ),
+        ];
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('invitee@example.com', '123456');
+      await controller.completeBabyOnboarding(
+        parentName: 'Invitee Parent',
+        babyName: 'Kendi Bebeği',
+        birthDate: DateTime(2026, 2, 1),
+      );
+      expect(
+        controller.snapshot.family?.id,
+        'family-email-invitee-example-com',
+      );
+      expect(controller.snapshot.baby?.name, 'Kendi Bebeği');
+
+      await controller.refreshRemoteFamilies(force: true);
+
+      expect(controller.snapshot.family?.id, 'family-sender');
+      expect(controller.snapshot.baby?.id, 'baby-sender');
+      expect(controller.snapshot.baby?.name, 'Aylin');
+
+      await controller.addRecord(
+        type: RecordType.diaper,
+        title: 'Bez değişimi',
+        value: 'Islak',
+      );
+
+      expect(remote.syncedRecords, isNotEmpty);
+      expect(remote.syncedRecords.last.familyId, 'family-sender');
+      expect(remote.syncedRecords.last.babyId, 'baby-sender');
+    },
+  );
+
+  test('editing and deleting a shared record syncs to remote', () async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = AppRepository(database);
+    await repository.seedContent();
+    final remote = _FakeRemoteSyncService();
+    final controller = AppController(repository, syncService: remote);
+
+    await controller.loginLocal('sender@example.com', '123456');
+    await controller.completeBabyOnboarding(
+      parentName: 'Sender Parent',
+      babyName: 'Aylin',
+      birthDate: DateTime(2026, 1, 1),
+    );
+    await controller.addRecord(
+      type: RecordType.diaper,
+      title: 'Bez değişimi',
+      value: 'Islak',
+    );
+
+    final record = controller.snapshot.records.firstWhere(
+      (item) => item.title == 'Bez değişimi',
+    );
+    remote.calls.clear();
+
+    await controller.updateRecord(
+      record.copyWith(value: 'Kuru', note: 'Gece kontrolü'),
+    );
+
+    expect(
+      remote.syncedRecords.last.copyWith(updatedAt: record.updatedAt).value,
+      'Kuru',
+    );
+    expect(remote.syncedRecords.last.familyId, controller.snapshot.family?.id);
+
+    remote.calls.clear();
+    await controller.deleteRecord(record.id);
+
+    expect(remote.calls, contains('deleteTrackerRecord:${record.id}'));
+  });
+
+  test('editing and deleting a shared reminder syncs to remote', () async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = AppRepository(database);
+    await repository.seedContent();
+    final remote = _FakeRemoteSyncService();
+    final controller = AppController(repository, syncService: remote);
+
+    await controller.loginLocal('sender@example.com', '123456');
+    await controller.completeBabyOnboarding(
+      parentName: 'Sender Parent',
+      babyName: 'Aylin',
+      birthDate: DateTime(2026, 1, 1),
+    );
+    await controller.addReminder(
+      category: ReminderCategory.water,
+      title: 'Su planı',
+      time: DateTime(2026, 2, 1, 9),
+      frequency: const ReminderPlan(
+        type: ReminderPlanType.dailyTimes,
+        times: [TimeOfDayValue(9, 0)],
+      ).encode(),
+    );
+
+    final reminder = controller.snapshot.reminders.firstWhere(
+      (item) => item.title == 'Su planı',
+    );
+    remote.calls.clear();
+
+    await controller.updateReminder(
+      reminder.copyWith(title: 'Su planı akşam', isActive: false),
+    );
+
+    expect(
+      remote.calls,
+      contains('syncReminder:${reminder.id}:${controller.snapshot.family?.id}'),
+    );
+
+    remote.calls.clear();
+    await controller.deleteReminder(reminder.id);
+
+    expect(remote.calls, contains('deleteReminder:${reminder.id}'));
+  });
+
+  test(
+    'partner record refresh creates in-app notification without local device notification',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService();
+      final notifications = InMemoryNotificationService();
+      final controller = AppController(
+        repository,
+        syncService: remote,
+        notificationService: notifications,
+      );
+
+      await controller.loginLocal('invitee@example.com', '123456');
+      remote.families = [
+        RemoteFamilySummary(
+          id: 'family-sender',
+          ownerUserId: 'sender-uid',
+          createdAt: DateTime(2026, 1, 1),
+          partnerEmails: const ['invitee@example.com'],
+          records: [
+            RemoteTrackerRecordSummary(
+              id: 'record-partner-action',
+              type: 'feeding',
+              title: 'Biberon',
+              familyId: 'family-sender',
+              value: '120 ml',
+              createdByUserId: 'sender-uid',
+              createdByName: 'Sender Parent',
+              occurredAt: DateTime(2026, 2, 1, 8),
+              createdAt: DateTime(2026, 2, 1, 8),
+              updatedAt: DateTime(2026, 2, 1, 8),
+            ),
+          ],
+        ),
+      ];
+
+      await controller.refreshRemoteFamilies();
+
+      final familyNotifications = controller.snapshot.notifications.where(
+        (item) => item.type == 'family_record',
+      );
+      expect(familyNotifications, hasLength(1));
+      expect(familyNotifications.single.body, contains('Sender Parent'));
+      expect(notifications.shown, isEmpty);
+
+      await controller.refreshRemoteFamilies();
+
+      expect(
+        controller.snapshot.notifications.where(
+          (item) => item.type == 'family_record',
+        ),
+        hasLength(1),
+      );
+      expect(notifications.shown, isEmpty);
+    },
+  );
+
+  test(
+    'sender refresh marks sent invite accepted after partner accepts remotely',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService();
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('sender@example.com', '123456');
+      await controller.completeBabyOnboarding(
+        parentName: 'Sender Parent',
+        babyName: 'Aylin',
+        birthDate: DateTime(2026, 1, 1),
+      );
+      await controller.addFamilyPartner('invitee@example.com');
+      expect(
+        controller.snapshot.invites.single.status,
+        FamilyInviteStatus.pending,
+      );
+
+      remote.families = [
+        RemoteFamilySummary(
+          id: controller.snapshot.family!.id,
+          ownerUserId: controller.snapshot.user!.id,
+          activeBabyId: controller.snapshot.baby!.id,
+          createdAt: controller.snapshot.family!.createdAt,
+          partnerEmails: const ['invitee@example.com'],
+        ),
+      ];
+
+      await controller.refreshRemoteFamilies();
+
+      expect(
+        controller.snapshot.invites.single.status,
+        FamilyInviteStatus.accepted,
+      );
+      expect(
+        controller.snapshot.family!.partnerUserIds,
+        contains('invitee@example.com'),
+      );
+    },
+  );
+
+  test(
+    'live family stream updates shared records without manual refresh',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService()
+        ..families = [
+          RemoteFamilySummary(
+            id: 'family-live',
+            ownerUserId: 'sender-uid',
+            activeBabyId: 'baby-live',
+            createdAt: DateTime(2026, 1, 1),
+            partnerEmails: const ['invitee@example.com'],
+            babies: [
+              RemoteBabySummary(
+                id: 'baby-live',
+                familyId: 'family-live',
+                name: 'Aylin',
+                birthDate: DateTime(2026, 1, 1),
+                createdAt: DateTime(2026, 1, 1),
+              ),
+            ],
+          ),
+        ];
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('invitee@example.com', '123456');
+      expect(controller.snapshot.records, isEmpty);
+      expect(remote.calls, contains('watchFamily:family-live'));
+
+      remote.familyStreams['family-live']!.add(
+        RemoteFamilySummary(
+          id: 'family-live',
+          ownerUserId: 'sender-uid',
+          activeBabyId: 'baby-live',
+          createdAt: DateTime(2026, 1, 1),
+          partnerEmails: const ['invitee@example.com'],
+          babies: [
+            RemoteBabySummary(
+              id: 'baby-live',
+              familyId: 'family-live',
+              name: 'Aylin',
+              birthDate: DateTime(2026, 1, 1),
+              createdAt: DateTime(2026, 1, 1),
+            ),
+          ],
+          records: [
+            RemoteTrackerRecordSummary(
+              id: 'record-live-diaper',
+              type: 'diaper',
+              title: 'Bez değişimi',
+              familyId: 'family-live',
+              babyId: 'baby-live',
+              value: 'Islak',
+              createdByUserId: 'sender-uid',
+              createdByName: 'Anne',
+              updatedByUserId: 'sender-uid',
+              updatedByName: 'Anne',
+              occurredAt: DateTime(2026, 2, 1, 9),
+              createdAt: DateTime(2026, 2, 1, 9),
+              updatedAt: DateTime(2026, 2, 1, 9),
+            ),
+          ],
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.snapshot.records.single.id, 'record-live-diaper');
+      expect(controller.snapshot.records.single.createdByName, 'Anne');
+    },
+  );
+
+  test(
+    'live family stream removes tombstoned shared record and reminder',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService()
+        ..families = [
+          RemoteFamilySummary(
+            id: 'family-live',
+            ownerUserId: 'sender-uid',
+            activeBabyId: 'baby-live',
+            createdAt: DateTime(2026, 1, 1),
+            partnerEmails: const ['invitee@example.com'],
+            babies: [
+              RemoteBabySummary(
+                id: 'baby-live',
+                familyId: 'family-live',
+                name: 'Aylin',
+                birthDate: DateTime(2026, 1, 1),
+                createdAt: DateTime(2026, 1, 1),
+              ),
+            ],
+            records: [
+              RemoteTrackerRecordSummary(
+                id: 'record-live-diaper',
+                type: 'diaper',
+                title: 'Bez değişimi',
+                familyId: 'family-live',
+                babyId: 'baby-live',
+                value: 'Islak',
+                createdByUserId: 'sender-uid',
+                createdByName: 'Anne',
+                occurredAt: DateTime(2026, 2, 1, 9),
+                createdAt: DateTime(2026, 2, 1, 9),
+                updatedAt: DateTime(2026, 2, 1, 9),
+              ),
+            ],
+            reminders: [
+              RemoteReminderSummary(
+                id: 'reminder-live-water',
+                title: 'Su hedefi',
+                category: 'water',
+                time: DateTime(2026, 2, 1, 9),
+                frequency: const ReminderPlan(
+                  type: ReminderPlanType.dailyTimes,
+                  times: [TimeOfDayValue(9, 0)],
+                ).encode(),
+                isActive: true,
+                familyId: 'family-live',
+                createdAt: DateTime(2026, 2, 1, 8),
+              ),
+            ],
+          ),
+        ];
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('invitee@example.com', '123456');
+      await controller.refreshRemoteFamilies(force: true);
+
+      expect(controller.snapshot.records, hasLength(1));
+      expect(controller.snapshot.reminders, hasLength(1));
+
+      remote.familyStreams['family-live']!.add(
+        RemoteFamilySummary(
+          id: 'family-live',
+          ownerUserId: 'sender-uid',
+          activeBabyId: 'baby-live',
+          createdAt: DateTime(2026, 1, 1),
+          partnerEmails: const ['invitee@example.com'],
+          babies: [
+            RemoteBabySummary(
+              id: 'baby-live',
+              familyId: 'family-live',
+              name: 'Aylin',
+              birthDate: DateTime(2026, 1, 1),
+              createdAt: DateTime(2026, 1, 1),
+            ),
+          ],
+          records: [
+            RemoteTrackerRecordSummary(
+              id: 'record-live-diaper',
+              type: 'diaper',
+              title: 'Bez değişimi',
+              familyId: 'family-live',
+              babyId: 'baby-live',
+              value: 'Islak',
+              createdByUserId: 'sender-uid',
+              createdByName: 'Anne',
+              occurredAt: DateTime(2026, 2, 1, 9),
+              createdAt: DateTime(2026, 2, 1, 9),
+              updatedAt: DateTime(2026, 2, 1, 10),
+              deletedAt: DateTime(2026, 2, 1, 10),
+            ),
+          ],
+          reminders: [
+            RemoteReminderSummary(
+              id: 'reminder-live-water',
+              title: 'Su hedefi',
+              category: 'water',
+              time: DateTime(2026, 2, 1, 9),
+              frequency: const ReminderPlan(
+                type: ReminderPlanType.dailyTimes,
+                times: [TimeOfDayValue(9, 0)],
+              ).encode(),
+              isActive: false,
+              familyId: 'family-live',
+              createdAt: DateTime(2026, 2, 1, 8),
+              updatedAt: DateTime(2026, 2, 1, 10),
+              deletedAt: DateTime(2026, 2, 1, 10),
+            ),
+          ],
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.snapshot.records, isEmpty);
+      expect(controller.snapshot.reminders, isEmpty);
+    },
+  );
+
+  test('completed vaccine syncs the updated vaccine status', () async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = AppRepository(database);
+    await repository.seedContent();
+    final remote = _FakeRemoteSyncService();
+    final controller = AppController(repository, syncService: remote);
+    await controller.loginLocal('sender@example.com', '123456');
+    await controller.completeBabyOnboarding(
+      parentName: 'Sender Parent',
+      babyName: 'Aylin',
+      birthDate: DateTime(2026, 1, 1),
+    );
+
+    final vaccine = controller.snapshot.vaccines.first;
+    await controller.completeVaccine(vaccine.id, true);
+
+    expect(remote.syncedVaccines.last.id, vaccine.id);
+    expect(remote.syncedVaccines.last.status, VaccineStatus.completed);
+    expect(remote.syncedVaccines.last.completedAt, isNotNull);
+  });
+}
+
+class _FakeRemoteSyncService implements RemoteSyncService {
+  final calls = <String>[];
+  final syncedRecords = <TrackerRecord>[];
+  final syncedVaccines = <VaccineEvent>[];
+  List<RemoteFamilySummary> families = const [];
+  final familyStreams = <String, StreamController<RemoteFamilySummary>>{};
+  bool failAddFamilyPartner = false;
+
+  @override
+  bool get isEnabled => true;
+
+  @override
+  Future<void> syncUser(UserProfile user) async {
+    calls.add('syncUser:${user.email}');
+  }
+
+  @override
+  Future<void> syncFamily(Family family) async {
+    calls.add('syncFamily:${family.id}');
+  }
+
+  @override
+  Future<void> syncBaby(BabyProfile baby) async {
+    calls.add('syncBaby:${baby.id}');
+  }
+
+  @override
+  Future<void> syncPregnancy(PregnancyProfile pregnancy) async {
+    calls.add('syncPregnancy:${pregnancy.id}');
+  }
+
+  @override
+  Future<void> syncTrackerRecord(TrackerRecord record) async {
+    calls.add('syncTrackerRecord:${record.id}');
+    syncedRecords.add(record);
+  }
+
+  @override
+  Future<void> deleteTrackerRecord(String recordId) async {
+    calls.add('deleteTrackerRecord:$recordId');
+  }
+
+  @override
+  Future<void> syncReminder(
+    ReminderItem reminder, {
+    required String familyId,
+    String? createdByName,
+  }) async {
+    calls.add('syncReminder:${reminder.id}:$familyId');
+  }
+
+  @override
+  Future<void> deleteReminder(String reminderId) async {
+    calls.add('deleteReminder:$reminderId');
+  }
+
+  @override
+  Future<void> syncVaccineEvent(
+    VaccineEvent vaccine, {
+    String? updatedByName,
+  }) async {
+    calls.add('syncVaccineEvent:${vaccine.id}');
+    syncedVaccines.add(vaccine);
+  }
+
+  @override
+  Future<void> addFamilyPartner({
+    required String familyId,
+    required String familyOwnerUserId,
+    required String email,
+    required String invitedByName,
+    String? invitedDisplayName,
+    String? roleLabel,
+    List<FamilyPermission> permissions = const [],
+  }) async {
+    calls.add('addFamilyPartner:$familyId:$email');
+    if (failAddFamilyPartner) throw StateError('remote failed');
+  }
+
+  @override
+  Future<void> updateFamilyInvitePermissions({
+    required FamilyInvite invite,
+    String? invitedDisplayName,
+    String? roleLabel,
+    required List<FamilyPermission> permissions,
+  }) async {
+    calls.add('updateFamilyInvitePermissions:${invite.id}');
+  }
+
+  @override
+  Future<void> acceptFamilyInvite(FamilyInvite invite) async {
+    calls.add('acceptFamilyInvite:${invite.id}');
+  }
+
+  @override
+  Future<void> declineFamilyInvite(FamilyInvite invite) async {
+    calls.add('declineFamilyInvite:${invite.id}');
+  }
+
+  @override
+  Future<List<RemoteFamilyInvite>> fetchPendingFamilyInvites(
+    String email,
+  ) async {
+    calls.add('fetchPendingFamilyInvites:$email');
+    return const [];
+  }
+
+  @override
+  Future<List<RemoteFamilySummary>> fetchMyFamilies() async {
+    calls.add('fetchMyFamilies');
+    return families;
+  }
+
+  @override
+  Stream<RemoteFamilySummary> watchFamily(String familyId) {
+    calls.add('watchFamily:$familyId');
+    return familyStreams
+        .putIfAbsent(familyId, () => StreamController<RemoteFamilySummary>())
+        .stream;
+  }
+
+  @override
+  Future<void> syncNotificationToken({
+    required String token,
+    required String platform,
+    String? familyId,
+    required bool notificationsEnabled,
+  }) async {
+    calls.add('syncNotificationToken:$platform:$familyId');
+  }
+
+  @override
+  Future<void> markNotificationRead(String notificationId) async {
+    calls.add('markNotificationRead:$notificationId');
+  }
+}
