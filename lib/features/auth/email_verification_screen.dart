@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,15 +16,8 @@ class EmailVerificationScreen extends ConsumerStatefulWidget {
 
 class _EmailVerificationScreenState
     extends ConsumerState<EmailVerificationScreen> {
-  final _code = TextEditingController();
   bool _verifying = false;
   bool _resending = false;
-
-  @override
-  void dispose() {
-    _code.dispose();
-    super.dispose();
-  }
 
   Future<void> _verify() async {
     if (_verifying) return;
@@ -33,13 +25,16 @@ class _EmailVerificationScreenState
     try {
       final verified = await ref
           .read(appControllerProvider)
-          .verifyEmailCode(_code.text);
+          .verifyEmailCode('');
       if (!mounted) return;
       if (verified) {
         showAppSnack(context, 'E-posta doğrulandı.');
         context.go('/growth');
       } else {
-        showAppSnack(context, 'Kod doğrulanamadı. Süresi dolmuş olabilir.');
+        showAppSnack(
+          context,
+          'Doğrulama bağlantısına tıkladıktan sonra tekrar deneyin.',
+        );
       }
     } catch (error) {
       if (mounted) showAppSnack(context, userFacingErrorMessage(error));
@@ -53,7 +48,9 @@ class _EmailVerificationScreenState
     setState(() => _resending = true);
     try {
       await ref.read(appControllerProvider).resendEmailVerificationCode();
-      if (mounted) showAppSnack(context, 'Doğrulama kodu tekrar gönderildi.');
+      if (mounted) {
+        showAppSnack(context, 'Doğrulama bağlantısı tekrar gönderildi.');
+      }
     } catch (error) {
       if (mounted) showAppSnack(context, userFacingErrorMessage(error));
     } finally {
@@ -91,7 +88,7 @@ class _EmailVerificationScreenState
             ),
             const SizedBox(height: 8),
             Text(
-              '$email adresine gönderilen 6 haneli kodu gir. Verilerini güvenli şekilde buluta bağlamadan ana ekrana geçmiyoruz.',
+              '$email adresine gönderilen doğrulama bağlantısını aç. Ardından buraya dönüp hesabını kontrol et.',
               textAlign: TextAlign.center,
               style: const TextStyle(color: AppColors.muted, height: 1.35),
             ),
@@ -102,15 +99,18 @@ class _EmailVerificationScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AppTextField(
-                    key: const ValueKey('email_verification_code'),
-                    controller: _code,
-                    label: 'DOĞRULAMA KODU',
-                    hint: '123456',
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(6),
+                  const Row(
+                    children: [
+                      SoftIcon(
+                        icon: Icons.mail_outline,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Mail kutunu kontrol et. Bağlantı birkaç dakika içinde gelmezse spam klasörüne de bak.',
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -123,14 +123,14 @@ class _EmailVerificationScreenState
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.verified_user_outlined),
-                    label: const Text('Doğrula ve devam et'),
+                    label: const Text('Doğrulamayı kontrol et'),
                   ),
                   TextButton(
                     onPressed: _resending ? null : _resend,
                     child: Text(
                       _resending
-                          ? 'Kod gönderiliyor...'
-                          : 'Doğrulama kodunu tekrar gönder',
+                          ? 'Bağlantı gönderiliyor...'
+                          : 'Doğrulama bağlantısını tekrar gönder',
                     ),
                   ),
                 ],

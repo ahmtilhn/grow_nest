@@ -1,4 +1,4 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 class EmailVerificationState {
   const EmailVerificationState({
@@ -38,36 +38,51 @@ class NoopEmailVerificationService implements EmailVerificationService {
 }
 
 class FirebaseEmailVerificationService implements EmailVerificationService {
-  FirebaseEmailVerificationService({FirebaseFunctions? functions})
-    : _functions = functions ?? FirebaseFunctions.instance;
+  FirebaseEmailVerificationService({firebase_auth.FirebaseAuth? auth})
+    : _auth = auth ?? firebase_auth.FirebaseAuth.instance;
 
-  final FirebaseFunctions _functions;
+  final firebase_auth.FirebaseAuth _auth;
 
   @override
   bool get isEnabled => true;
 
   @override
   Future<EmailVerificationState> requestCode() async {
-    final result = await _functions
-        .httpsCallable('requestEmailVerificationCode')
-        .call<Map<String, dynamic>>();
-    return _stateFrom(result.data);
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw firebase_auth.FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'Önce giriş yapmalısınız.',
+      );
+    }
+
+    await user.reload();
+    final refreshedUser = _auth.currentUser;
+    if (refreshedUser?.emailVerified == true) {
+      return const EmailVerificationState(verified: true);
+    }
+
+    await refreshedUser?.sendEmailVerification();
+    return const EmailVerificationState(
+      verified: false,
+      cooldownSeconds: 60,
+      message: 'Doğrulama bağlantısı e-posta adresine gönderildi.',
+    );
   }
 
   @override
   Future<EmailVerificationState> verifyCode(String code) async {
-    final result = await _functions
-        .httpsCallable('verifyEmailCode')
-        .call<Map<String, dynamic>>({'code': code.trim()});
-    return _stateFrom(result.data);
-  }
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw firebase_auth.FirebaseAuthException(
+        code: 'not-authenticated',
+        message: 'Önce giriş yapmalısınız.',
+      );
+    }
 
-  EmailVerificationState _stateFrom(Map<String, dynamic> data) {
+    await user.reload();
     return EmailVerificationState(
-      verified: data['verified'] == true,
-      cooldownSeconds: (data['cooldownSeconds'] as num?)?.toInt() ?? 0,
-      remainingAttempts: (data['remainingAttempts'] as num?)?.toInt(),
-      message: data['message'] as String?,
+      verified: _auth.currentUser?.emailVerified == true,
     );
   }
 }

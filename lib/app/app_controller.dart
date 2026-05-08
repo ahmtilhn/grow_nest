@@ -218,9 +218,6 @@ class AppController extends ChangeNotifier {
 
   Future<bool> verifyEmailCode(String code) async {
     _requireSignedInUser();
-    if (!RegExp(r'^\d{6}$').hasMatch(code.trim())) {
-      throw ArgumentError('6 haneli doğrulama kodunu girin.');
-    }
     final state = await emailVerification.verifyCode(code);
     if (!state.verified) return false;
     await _markEmailVerified();

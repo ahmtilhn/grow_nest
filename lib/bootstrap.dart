@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,19 +76,15 @@ Future<_FirebaseBindings> _initializeFirebaseBindings() async {
 
     final auth = firebase_auth.FirebaseAuth.instance;
     final firestoreInstance = firestore.FirebaseFirestore.instance;
-    final functions = FirebaseFunctions.instance;
 
     if (_useFirebaseEmulators) {
       await auth.useAuthEmulator(_firebaseEmulatorHost, 9099);
       firestoreInstance.useFirestoreEmulator(_firebaseEmulatorHost, 8080);
-      functions.useFunctionsEmulator(_firebaseEmulatorHost, 5001);
     }
 
     return _FirebaseBindings(
       authGateway: FirebaseAuthGateway(auth: auth),
-      emailVerificationService: FirebaseEmailVerificationService(
-        functions: functions,
-      ),
+      emailVerificationService: FirebaseEmailVerificationService(auth: auth),
       syncService: FirebaseFirestoreSyncService(
         firestoreInstance: firestoreInstance,
         auth: auth,
