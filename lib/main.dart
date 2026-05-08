@@ -1,3 +1,4 @@
 import 'bootstrap.dart';
 
 Future<void> main() => bootstrap();
+//şimdi şunları ekleyeceğiz, aile üyesi silme, aile sayfasının ui ı düzelt, bir de mesela ben bir hesabı aile üyesi olarak eklemiştim sen fiziki cihaza realese yükledikten sonra daha önce aile iüyesi olarak eklediğim bir hesapla giriş yaptım ama veriler görünmedi, bunu nasıl çözmen gerekiyor ise çöz, ayrıca apple ile hesap açıldığı zaman temel bilgileri de çek kullanıcı adı soy adı doğum tarihi telefon numarası ek olarak da bunu google ile giriş yapıldığı zaman da yapıyor mu onu da kontrol et, ayrıca profil ve ayarlar sayfasında ayrıca sile paylaşımı sekmesi var bu alan zaten aile sayfası içerisinde yer alıyor o yüzden profil içeriisndekini kaldıralım, ayrıca bağzı izinler seçildiğinde yada sonradan eklenen hesp için izin düzenlendiğinde hata veriyor uygulama, onlarıda kontrol et
