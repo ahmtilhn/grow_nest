@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -141,7 +142,7 @@ class LocalNotificationService implements NotificationService {
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('@drawable/ic_stat_notification'),
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
@@ -207,6 +208,7 @@ class LocalNotificationService implements NotificationService {
         channelDescription: 'MiniAdımlar hatırlatıcı ve aile bildirimleri',
         importance: Importance.high,
         priority: Priority.high,
+        color: Color(0xFF28758A),
         playSound: playSound,
         silent: !playSound,
       ),
