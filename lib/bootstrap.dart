@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
 import 'package:firebase_core/firebase_core.dart';
@@ -45,7 +47,7 @@ Future<void> bootstrap() async {
       avatarUrl: currentUser.avatarUrl,
     );
   }
-  final notificationService = await LocalNotificationService.create();
+  final notificationService = await _createNotificationService();
   final controller = AppController(
     repository,
     authGateway: authGateway,
@@ -56,9 +58,6 @@ Future<void> bootstrap() async {
   await controller.load();
   await controller.refreshFamilyInvites(showDeviceNotification: false);
   await controller.refreshRemoteFamilies(showDeviceNotification: false);
-  if (firebaseBindings.syncService.isEnabled) {
-    await PushNotificationBridge().bind(controller);
-  }
 
   runApp(
     ProviderScope(
@@ -66,6 +65,29 @@ Future<void> bootstrap() async {
       child: const MiniAdimlarApp(),
     ),
   );
+
+  if (firebaseBindings.syncService.isEnabled) {
+    unawaited(_bindPushNotifications(controller));
+  }
+}
+
+Future<NotificationService> _createNotificationService() async {
+  try {
+    return await LocalNotificationService.create();
+  } catch (error, stackTrace) {
+    debugPrint('Local notification initialization skipped: $error');
+    debugPrintStack(stackTrace: stackTrace);
+    return InMemoryNotificationService();
+  }
+}
+
+Future<void> _bindPushNotifications(AppController controller) async {
+  try {
+    await PushNotificationBridge().bind(controller);
+  } catch (error, stackTrace) {
+    debugPrint('Push notification bridge disabled: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
 }
 
 Future<_FirebaseBindings> _initializeFirebaseBindings() async {

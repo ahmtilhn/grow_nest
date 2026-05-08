@@ -17,26 +17,63 @@ class PushNotificationBridge {
   final FirebaseMessaging _messaging;
 
   Future<void> bind(AppController controller) async {
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    try {
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    } catch (error) {
+      debugPrint('Firebase background messaging registration skipped: $error');
+    }
+    await _trySetForegroundPresentationOptions();
+    await _tryRequestPermission();
     FirebaseMessaging.onMessage.listen((message) async {
       await controller.refreshRemoteFamilies(force: true);
     });
-    final token = await _messaging.getToken();
+    final token = await _tryGetToken();
     if (token != null) {
       await controller.syncNotificationToken(
         token: token,
         platform: _platformLabel,
       );
     }
-    _messaging.onTokenRefresh.listen((token) {
-      controller.syncNotificationToken(token: token, platform: _platformLabel);
-    });
+    _messaging.onTokenRefresh.listen(
+      (token) async {
+        await controller.syncNotificationToken(
+          token: token,
+          platform: _platformLabel,
+        );
+      },
+      onError: (Object error) {
+        debugPrint('Push notification token refresh skipped: $error');
+      },
+    );
+  }
+
+  Future<void> _trySetForegroundPresentationOptions() async {
+    try {
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    } catch (error) {
+      debugPrint('Foreground notification presentation skipped: $error');
+    }
+  }
+
+  Future<void> _tryRequestPermission() async {
+    try {
+      await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    } catch (error) {
+      debugPrint('Push notification permission request skipped: $error');
+    }
+  }
+
+  Future<String?> _tryGetToken() async {
+    try {
+      return await _messaging.getToken();
+    } catch (error) {
+      debugPrint('Push notification token unavailable: $error');
+      return null;
+    }
   }
 
   String get _platformLabel {

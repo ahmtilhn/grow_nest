@@ -2,11 +2,14 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, debugPrint, defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:crypto/crypto.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../firebase_options.dart';
 
 class AuthIdentity {
   const AuthIdentity({
@@ -189,71 +192,86 @@ class FirebaseAuthGateway implements AuthGateway {
 
   final firebase_auth.FirebaseAuth _auth;
   bool _googleInitialized = false;
+  LocalAuthGateway? _developerFallbackAuth;
 
   @override
   AuthIdentity? get currentUser => _fromFirebaseUser(_auth.currentUser);
 
   Future<void> _ensureGoogleInitialized() async {
     if (kIsWeb || _googleInitialized) return;
-    await GoogleSignIn.instance.initialize();
+    await GoogleSignIn.instance.initialize(clientId: _googleClientId);
     _googleInitialized = true;
   }
 
   @override
   Future<AuthIdentity?> signInWithGoogle() async {
-    if (kIsWeb) {
-      final provider = firebase_auth.GoogleAuthProvider()
-        ..addScope('email')
-        ..addScope('profile');
-      final credential = await _auth.signInWithPopup(provider);
-      return _fromFirebaseUser(credential.user);
-    }
+    try {
+      if (kIsWeb) {
+        final provider = firebase_auth.GoogleAuthProvider()
+          ..addScope('email')
+          ..addScope('profile');
+        final credential = await _auth.signInWithPopup(provider);
+        return _fromFirebaseUser(credential.user);
+      }
 
-    await _ensureGoogleInitialized();
-    final googleUser = await GoogleSignIn.instance.authenticate();
-    final googleAuth = googleUser.authentication;
-    final credential = firebase_auth.GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-    );
-    final result = await _auth.signInWithCredential(credential);
-    return _fromFirebaseUser(result.user);
+      await _ensureGoogleInitialized();
+      final googleUser = await GoogleSignIn.instance.authenticate();
+      final googleAuth = googleUser.authentication;
+      final credential = firebase_auth.GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+      final result = await _auth.signInWithCredential(credential);
+      return _fromFirebaseUser(result.user);
+    } catch (error) {
+      return _developerGoogleFallback(error);
+    }
   }
 
   @override
   Future<AuthIdentity?> signInWithApple() async {
-    if (kIsWeb) {
-      final provider = firebase_auth.OAuthProvider('apple.com')
-        ..addScope('email')
-        ..addScope('name');
-      final result = await _auth.signInWithPopup(provider);
-      return _fromFirebaseUser(result.user);
-    }
+    try {
+      if (kIsWeb) {
+        final provider = firebase_auth.OAuthProvider('apple.com')
+          ..addScope('email')
+          ..addScope('name');
+        final result = await _auth.signInWithPopup(provider);
+        return _fromFirebaseUser(result.user);
+      }
 
-    final rawNonce = _generateNonce();
-    final nonce = _sha256OfString(rawNonce);
-    final appleCredential = await SignInWithApple.getAppleIDCredential(
-      scopes: [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-      nonce: nonce,
-    );
-    final oauthCredential = firebase_auth.OAuthProvider(
-      'apple.com',
-    ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
-    final result = await _auth.signInWithCredential(oauthCredential);
-    final user = result.user;
-    final displayName = [
-      appleCredential.givenName,
-      appleCredential.familyName,
-    ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
-    if (user != null &&
-        displayName.trim().isNotEmpty &&
-        (user.displayName == null || user.displayName!.trim().isEmpty)) {
-      await user.updateDisplayName(displayName.trim());
-      await user.reload();
+      final isAvailable = await SignInWithApple.isAvailable();
+      if (!isAvailable) {
+        throw const SignInWithAppleNotSupportedException(
+          message: 'Sign in with Apple is not available on this device.',
+        );
+      }
+      final rawNonce = _generateNonce();
+      final nonce = _sha256OfString(rawNonce);
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: nonce,
+      );
+      final oauthCredential = firebase_auth.OAuthProvider(
+        'apple.com',
+      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
+      final result = await _auth.signInWithCredential(oauthCredential);
+      final user = result.user;
+      final displayName = [
+        appleCredential.givenName,
+        appleCredential.familyName,
+      ].where((part) => part != null && part.trim().isNotEmpty).join(' ');
+      if (user != null &&
+          displayName.trim().isNotEmpty &&
+          (user.displayName == null || user.displayName!.trim().isEmpty)) {
+        await user.updateDisplayName(displayName.trim());
+        await user.reload();
+      }
+      return _fromFirebaseUser(_auth.currentUser ?? user);
+    } catch (error) {
+      return _developerAppleFallback(error);
     }
-    return _fromFirebaseUser(_auth.currentUser ?? user);
   }
 
   @override
@@ -314,6 +332,49 @@ class FirebaseAuthGateway implements AuthGateway {
       providerId: providerId,
       avatarUrl: user.photoURL,
     );
+  }
+
+  String? get _googleClientId {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return DefaultFirebaseOptions.ios.iosClientId;
+    }
+    return null;
+  }
+
+  bool get _allowDeveloperAuthFallback {
+    return kDebugMode || const bool.fromEnvironment('ALLOW_LOCAL_AUTH_FALLBACK');
+  }
+
+  Future<AuthIdentity?> _developerGoogleFallback(Object error) async {
+    if (!_allowDeveloperAuthFallback || _isUserCancelledGoogleSignIn(error)) {
+      Error.throwWithStackTrace(error, StackTrace.current);
+    }
+    debugPrint('Google sign-in fell back to local debug auth: $error');
+    final fallback = await _developerFallback();
+    return fallback.signInWithGoogle();
+  }
+
+  Future<AuthIdentity?> _developerAppleFallback(Object error) async {
+    if (!_allowDeveloperAuthFallback || _isUserCancelledAppleSignIn(error)) {
+      Error.throwWithStackTrace(error, StackTrace.current);
+    }
+    debugPrint('Apple sign-in fell back to local debug auth: $error');
+    final fallback = await _developerFallback();
+    return fallback.signInWithApple();
+  }
+
+  Future<LocalAuthGateway> _developerFallback() async {
+    return _developerFallbackAuth ??= await LocalAuthGateway.create();
+  }
+
+  bool _isUserCancelledGoogleSignIn(Object error) {
+    return error is GoogleSignInException &&
+        error.code == GoogleSignInExceptionCode.canceled;
+  }
+
+  bool _isUserCancelledAppleSignIn(Object error) {
+    return error is SignInWithAppleAuthorizationException &&
+        error.code == AuthorizationErrorCode.canceled;
   }
 
   String _generateNonce([int length = 32]) {
