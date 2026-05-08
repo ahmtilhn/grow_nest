@@ -110,12 +110,15 @@ async function notificationTargetsForFamily(familyId, actorId) {
     .where("status", "==", "accepted")
     .get();
   const targetUserIds = new Set([ownerId]);
-  accepted.forEach((doc) => {
+  for (const doc of accepted.docs) {
     const data = doc.data();
-    if (data.acceptedUserId && canReceiveFamilyNotifications(data)) {
+    if (!canReceiveFamilyNotifications(data)) continue;
+    if (data.acceptedUserId) {
       targetUserIds.add(data.acceptedUserId);
     }
-  });
+    const currentUsers = await usersByEmail(data.invitedEmail);
+    currentUsers.forEach((user) => targetUserIds.add(user.id));
+  }
   if (actorId) targetUserIds.delete(actorId);
   return [...targetUserIds];
 }

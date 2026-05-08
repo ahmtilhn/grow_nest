@@ -89,6 +89,10 @@ service cloud.firestore {
         : '';
     }
 
+    function authEmailVerified() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+
     function hasField(data, field) {
       return data.keys().hasAny([field]);
     }
@@ -160,7 +164,13 @@ service cloud.firestore {
       return authEmail() != '' &&
         exists(familyInvitePath(familyId, authEmail())) &&
         get(familyInvitePath(familyId, authEmail())).data.status == 'accepted' &&
-        get(familyInvitePath(familyId, authEmail())).data.acceptedUserId == request.auth.uid;
+        (
+          get(familyInvitePath(familyId, authEmail())).data.acceptedUserId == request.auth.uid ||
+          (
+            authEmailVerified() &&
+            get(familyInvitePath(familyId, authEmail())).data.invitedEmail == authEmail()
+          )
+        );
     }
 
     function acceptedInviteData(familyId) {
@@ -452,6 +462,19 @@ service cloud.firestore {
         );
     }
 
+    function validAcceptedInviteRelink(inviteDocId) {
+      return validInvite(request.resource.data, inviteDocId) &&
+        inviteIdentityUnchanged(inviteDocId) &&
+        authEmailVerified() &&
+        resource.data.invitedEmail == authEmail() &&
+        resource.data.status == 'accepted' &&
+        request.resource.data.status == 'accepted' &&
+        request.resource.data.acceptedUserId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'acceptedUserId', 'updatedAt'
+        ]);
+    }
+
     function validInviteRemoval(inviteDocId) {
       return validInvite(request.resource.data, inviteDocId) &&
         inviteIdentityUnchanged(inviteDocId) &&
@@ -628,6 +651,7 @@ service cloud.firestore {
       allow update: if signedIn() &&
         (
           validInviteResponse(inviteDocId) ||
+          validAcceptedInviteRelink(inviteDocId) ||
           validInvitePermissionUpdate(inviteDocId) ||
           validInviteResend(inviteDocId) ||
           validInviteRemoval(inviteDocId)

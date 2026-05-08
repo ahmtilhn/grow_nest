@@ -532,11 +532,23 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
         .where('ownerUserId', isEqualTo: firebaseUser.uid)
         .limit(5)
         .get();
-    final acceptedSnapshot = await _familyInvites
+    final acceptedByUserSnapshot = await _familyInvites
         .where('acceptedUserId', isEqualTo: firebaseUser.uid)
         .where('status', isEqualTo: 'accepted')
-        .limit(5)
+        .limit(20)
         .get();
+    final acceptedByEmailSnapshot = email.isEmpty
+        ? null
+        : await _familyInvites
+              .where('invitedEmail', isEqualTo: email)
+              .where('status', isEqualTo: 'accepted')
+              .limit(20)
+              .get();
+    final acceptedInviteDocs = _uniqueInviteDocs([
+      ...acceptedByUserSnapshot.docs,
+      ...?acceptedByEmailSnapshot?.docs,
+    ]);
+    await _relinkAcceptedInvitesToCurrentUser(acceptedInviteDocs, firebaseUser);
     final sentAcceptedSnapshot = await _familyInvites
         .where('invitedByUserId', isEqualTo: firebaseUser.uid)
         .where('status', isEqualTo: 'accepted')
@@ -547,7 +559,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
         <String, firestore.DocumentSnapshot<Map<String, dynamic>>>{
           for (final doc in ownedSnapshot.docs) doc.id: doc,
         };
-    for (final inviteDoc in acceptedSnapshot.docs) {
+    for (final inviteDoc in acceptedInviteDocs) {
       final familyId = inviteDoc.data()['familyId'] as String?;
       if (familyId == null || familyDocs.containsKey(familyId)) continue;
       final familyDoc = await _families.doc(familyId).get();
@@ -555,7 +567,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
     }
 
     final acceptedPartnerEmailsByFamily = <String, Set<String>>{};
-    for (final doc in acceptedSnapshot.docs) {
+    for (final doc in acceptedInviteDocs) {
       final data = doc.data();
       final familyId = data['familyId'] as String?;
       if (familyId == null || email.isEmpty) continue;
@@ -594,7 +606,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
                     .limit(30)
                     .get())
                 .docs
-          : acceptedSnapshot.docs
+          : acceptedInviteDocs
                 .where((inviteDoc) => inviteDoc.data()['familyId'] == doc.id)
                 .toList();
       final partnerEmails = {
@@ -719,7 +731,10 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
           .where('familyId', isEqualTo: familyId)
           .where('status', isEqualTo: 'accepted');
       if (!owner) {
-        query = query.where('acceptedUserId', isEqualTo: firebaseUser.uid);
+        final email = firebaseUser.email?.trim().toLowerCase() ?? '';
+        query = email.isEmpty
+            ? query.where('acceptedUserId', isEqualTo: firebaseUser.uid)
+            : query.where('invitedEmail', isEqualTo: email);
       }
       inviteSubscription = query.limit(30).snapshots().listen((snapshot) {
         inviteDocs = snapshot.docs;
@@ -963,6 +978,43 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
       'seenBy': firestore.FieldValue.arrayUnion([firebaseUser.uid]),
       'updatedAt': firestore.FieldValue.serverTimestamp(),
     }, firestore.SetOptions(merge: true));
+  }
+
+  Future<void> _relinkAcceptedInvitesToCurrentUser(
+    Iterable<firestore.QueryDocumentSnapshot<Map<String, dynamic>>> inviteDocs,
+    firebase_auth.User firebaseUser,
+  ) async {
+    final email = firebaseUser.email?.trim().toLowerCase() ?? '';
+    if (email.isEmpty) return;
+    for (final doc in inviteDocs) {
+      final data = doc.data();
+      if (data['status'] != 'accepted') continue;
+      final invitedEmail =
+          (data['invitedEmail'] as String?)?.trim().toLowerCase() ?? '';
+      if (invitedEmail != email || data['acceptedUserId'] == firebaseUser.uid) {
+        continue;
+      }
+      try {
+        await doc.reference.update({
+          'acceptedUserId': firebaseUser.uid,
+          'updatedAt': firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (_) {
+        // Email-based access still works after rules are deployed; relinking is
+        // a best-effort repair for future notifications and UID-based queries.
+      }
+    }
+  }
+
+  List<firestore.QueryDocumentSnapshot<Map<String, dynamic>>> _uniqueInviteDocs(
+    Iterable<firestore.QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+  ) {
+    final byId =
+        <String, firestore.QueryDocumentSnapshot<Map<String, dynamic>>>{};
+    for (final doc in docs) {
+      byId[doc.id] = doc;
+    }
+    return byId.values.toList();
   }
 
   Future<void> _setCreatePayloadThenMutable(

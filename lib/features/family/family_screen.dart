@@ -311,6 +311,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           else ...[
             for (final partner in partners)
               ListTile(
+                key: ValueKey('partner-$partner'),
                 contentPadding: EdgeInsets.zero,
                 leading: const CircleAvatar(child: Icon(Icons.person_rounded)),
                 title: Text(partner),
@@ -318,6 +319,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
               ),
             for (final invite in invites)
               ListTile(
+                key: ValueKey('invite-${invite.id}'),
                 contentPadding: EdgeInsets.zero,
                 leading: const CircleAvatar(
                   backgroundColor: AppColors.softPink,
@@ -372,7 +374,9 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
         return StatefulBuilder(
           builder: (context, setSheetState) {
             Future<void> save() async {
+              if (saving) return;
               setSheetState(() => saving = true);
+              var saved = false;
               try {
                 await ref
                     .read(appControllerProvider)
@@ -382,8 +386,11 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                       roleLabel: roleLabel,
                       permissions: selected.toList(),
                     );
-                if (sheetContext.mounted && rootContext.mounted) {
+                saved = true;
+                if (sheetContext.mounted) {
                   Navigator.pop(sheetContext);
+                }
+                if (rootContext.mounted) {
                   showAppSnack(rootContext, 'Yetkiler güncellendi.');
                 }
               } catch (error) {
@@ -391,7 +398,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                   showAppSnack(rootContext, userFacingErrorMessage(error));
                 }
               } finally {
-                if (sheetContext.mounted) {
+                if (!saved && sheetContext.mounted) {
                   setSheetState(() => saving = false);
                 }
               }
@@ -598,8 +605,8 @@ class _InviteActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!canEdit && !canRemove) return const SizedBox.shrink();
-    return Wrap(
-      spacing: 2,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (canEdit)
           IconButton(
