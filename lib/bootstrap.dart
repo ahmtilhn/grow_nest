@@ -45,6 +45,7 @@ Future<void> bootstrap() async {
       displayName: currentUser.displayName,
       emailVerified: currentUser.emailVerified,
       avatarUrl: currentUser.avatarUrl,
+      phone: currentUser.phone,
     );
   }
   final notificationService = await _createNotificationService();

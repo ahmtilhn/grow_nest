@@ -166,18 +166,6 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 18),
           SectionHeader(
-            title: 'AİLE PAYLAŞIMI',
-            action: 'Davet Et',
-            onAction: () => _showInvitePartner(context, controller),
-          ),
-          const SizedBox(height: 10),
-          _FamilySharingCard(
-            partners: snapshot.family?.partnerUserIds ?? const [],
-            invites: snapshot.invites,
-            onInvite: () => _showInvitePartner(context, controller),
-          ),
-          const SizedBox(height: 18),
-          SectionHeader(
             title: 'ORTAK RUTİNLER',
             action: 'Yeni',
             onAction: () => context.push('/reminder/new'),
@@ -649,40 +637,6 @@ class ProfileScreen extends ConsumerWidget {
     if (confirmed == true) await controller.logout();
   }
 
-  Future<void> _showInvitePartner(
-    BuildContext context,
-    AppController controller,
-  ) async {
-    final email = TextEditingController();
-    final invited = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Aile üyesi ekle'),
-        content: AppTextField(
-          controller: email,
-          label: 'E-posta',
-          keyboardType: TextInputType.emailAddress,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Ekle'),
-          ),
-        ],
-      ),
-    );
-    if (invited == true) {
-      await controller.addFamilyPartner(email.text);
-      if (context.mounted) {
-        showAppSnack(context, 'Aile paylaşımı güncellendi.');
-      }
-    }
-  }
-
   Future<void> _showBirthCompletedEditor(
     BuildContext context,
     AppController controller,
@@ -775,65 +729,6 @@ class ProfileScreen extends ConsumerWidget {
     'silent' => 'Bildirim sesi: Sessiz',
     _ => 'Bildirim sesi: Sakin çan',
   };
-}
-
-class _FamilySharingCard extends StatelessWidget {
-  const _FamilySharingCard({
-    required this.partners,
-    required this.invites,
-    required this.onInvite,
-  });
-
-  final List<String> partners;
-  final List<FamilyInvite> invites;
-  final VoidCallback onInvite;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const SoftIcon(
-              icon: Icons.group_add_rounded,
-              color: AppColors.softPink,
-            ),
-            title: const Text('Ortak aile hesabı'),
-            subtitle: const Text(
-              'Karşı hesaba uygulama içi davet gider; kabul edilince hesaplar birleşir.',
-            ),
-            trailing: IconButton(
-              onPressed: onInvite,
-              icon: const Icon(Icons.person_add_alt_1_rounded),
-            ),
-          ),
-          if (partners.isEmpty && invites.isEmpty)
-            const Text('Henüz ortak veya bekleyen davet yok.')
-          else ...[
-            for (final partner in partners)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(child: Icon(Icons.person_rounded)),
-                title: Text(partner),
-                subtitle: const Text('Ortak erişim açık'),
-              ),
-            for (final invite in invites.take(4))
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(
-                  backgroundColor: AppColors.softBlue,
-                  child: Icon(Icons.mail_outline_rounded),
-                ),
-                title: Text(invite.invitedEmail),
-                subtitle: Text('Davet: ${invite.status.name}'),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
 }
 
 class _SharedReminderPlansCard extends StatelessWidget {

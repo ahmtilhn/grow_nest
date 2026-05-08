@@ -77,177 +77,39 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     final canManagePermissions = controller.hasPermission(
       FamilyPermission.manageUserPermissions,
     );
+    final canRemoveMembers = controller.hasPermission(
+      FamilyPermission.removeUsers,
+    );
     return AppScreen(
       title: 'Ortak Çalışma Alanı',
       subtitle:
           'Bebeğinizin gelişimini partnerinizle birlikte yönetin ve senkronize kalın.',
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SoftIcon(
-                      icon: Icons.group_add_rounded,
-                      color: AppColors.softPink,
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Ebeveyn Davet Et',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text('Davet, karşı hesabın bildirimlerinde görünür.'),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _partnerEmail,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'E-posta',
-                        prefixIcon: Icon(Icons.mail_outline_rounded),
-                      ),
-                      onSubmitted: (_) => _invitePartner(),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _partnerName,
-                      decoration: const InputDecoration(
-                        labelText: 'Görünen ad / özel rol adı',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _roleLabel,
-                      decoration: const InputDecoration(labelText: 'Rol'),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'Ebeveyn',
-                          child: Text('Ebeveyn'),
-                        ),
-                        DropdownMenuItem(value: 'Anne', child: Text('Anne')),
-                        DropdownMenuItem(value: 'Baba', child: Text('Baba')),
-                        DropdownMenuItem(
-                          value: 'Bakıcı',
-                          child: Text('Bakıcı'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Aile Üyesi',
-                          child: Text('Aile Üyesi'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Doktor',
-                          child: Text('Doktor'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Görüntüleyici',
-                          child: Text('Sadece görüntüleme'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setState(() {
-                          _roleLabel = value;
-                          _selectedPermissions =
-                              FamilyPermissionSets.defaultsForRole(
-                                value,
-                              ).toSet();
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    _PermissionPicker(
-                      selected: _selectedPermissions,
-                      onChanged: (next) =>
-                          setState(() => _selectedPermissions = next),
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: _saving || !canInvite ? null : _invitePartner,
-                      child: Text(_saving ? 'KAYDEDİLİYOR' : 'DAVET GÖNDER'),
-                    ),
-                    if (!canInvite) ...[
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Davet göndermek için owner veya davet yetkisi gerekir.',
-                        style: TextStyle(color: AppColors.muted, fontSize: 12),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: AppCard(
-                color: AppColors.softGreen,
-                borderColor: const Color(0xFFD3E3DC),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Ortaklar ve Davetler',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 12),
-                    if (partners.isEmpty && invites.isEmpty)
-                      const Text('Henüz ortak eklenmedi.')
-                    else ...[
-                      for (final partner in partners)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.person_rounded),
-                          ),
-                          title: Text(partner),
-                          subtitle: const Text('Hesap birleşti'),
-                        ),
-                      for (final invite in invites)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
-                            backgroundColor: AppColors.softPink,
-                            child: Icon(Icons.mail_outline_rounded),
-                          ),
-                          title: Text(
-                            invite.invitedDisplayName?.trim().isNotEmpty == true
-                                ? invite.invitedDisplayName!
-                                : invite.invitedEmail,
-                          ),
-                          subtitle: Text(
-                            '${invite.invitedEmail}\n${invite.roleLabel ?? 'Rol'} - ${invite.permissions.length} izin - Davet: ${invite.status.name}',
-                          ),
-                          isThreeLine: true,
-                          trailing: canManagePermissions
-                              ? IconButton(
-                                  tooltip: 'Yetkileri düzenle',
-                                  icon: const Icon(Icons.tune_rounded),
-                                  onPressed: () =>
-                                      _editInvitePermissions(invite),
-                                )
-                              : null,
-                        ),
-                    ],
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        const Chip(label: Text('Paylaşım açık')),
-                        Chip(
-                          label: Text(
-                            controller.isFamilyOwner
-                                ? 'Yetki: Owner'
-                                : 'Yetki: Sınırlı',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final inviteCard = _buildInviteCard(canInvite: canInvite);
+            final membersCard = _buildMembersCard(
+              partners: partners,
+              invites: invites,
+              canManagePermissions: canManagePermissions,
+              canRemoveMembers: canRemoveMembers,
+              currentUserId: snapshot.user?.id,
+              isOwner: controller.isFamilyOwner,
+            );
+            if (constraints.maxWidth < 760) {
+              return Column(
+                children: [inviteCard, const SizedBox(height: 12), membersCard],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: inviteCard),
+                const SizedBox(width: 12),
+                Expanded(child: membersCard),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 18),
         AppCard(
@@ -340,6 +202,155 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           style: const TextStyle(color: AppColors.muted),
         ),
       ],
+    );
+  }
+
+  Widget _buildInviteCard({required bool canInvite}) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SoftIcon(
+            icon: Icons.group_add_rounded,
+            color: AppColors.softPink,
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Ebeveyn Davet Et',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
+          const Text('Davet, karşı hesabın bildirimlerinde görünür.'),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _partnerEmail,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'E-posta',
+              prefixIcon: Icon(Icons.mail_outline_rounded),
+            ),
+            onSubmitted: (_) => _invitePartner(),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _partnerName,
+            decoration: const InputDecoration(
+              labelText: 'Görünen ad / özel rol adı',
+              prefixIcon: Icon(Icons.badge_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _roleLabel,
+            decoration: const InputDecoration(labelText: 'Rol'),
+            items: const [
+              DropdownMenuItem(value: 'Ebeveyn', child: Text('Ebeveyn')),
+              DropdownMenuItem(value: 'Anne', child: Text('Anne')),
+              DropdownMenuItem(value: 'Baba', child: Text('Baba')),
+              DropdownMenuItem(value: 'Bakıcı', child: Text('Bakıcı')),
+              DropdownMenuItem(value: 'Aile Üyesi', child: Text('Aile Üyesi')),
+              DropdownMenuItem(value: 'Doktor', child: Text('Doktor')),
+              DropdownMenuItem(
+                value: 'Görüntüleyici',
+                child: Text('Sadece görüntüleme'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() {
+                _roleLabel = value;
+                _selectedPermissions = FamilyPermissionSets.defaultsForRole(
+                  value,
+                ).toSet();
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          _PermissionPicker(
+            selected: _selectedPermissions,
+            onChanged: (next) => setState(() => _selectedPermissions = next),
+          ),
+          const SizedBox(height: 12),
+          FilledButton(
+            onPressed: _saving || !canInvite ? null : _invitePartner,
+            child: Text(_saving ? 'KAYDEDİLİYOR' : 'DAVET GÖNDER'),
+          ),
+          if (!canInvite) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Davet göndermek için owner veya davet yetkisi gerekir.',
+              style: TextStyle(color: AppColors.muted, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMembersCard({
+    required List<String> partners,
+    required List<FamilyInvite> invites,
+    required bool canManagePermissions,
+    required bool canRemoveMembers,
+    required bool isOwner,
+    String? currentUserId,
+  }) {
+    return AppCard(
+      color: AppColors.softGreen,
+      borderColor: const Color(0xFFD3E3DC),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Ortaklar ve Davetler',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          if (partners.isEmpty && invites.isEmpty)
+            const Text('Henüz ortak eklenmedi.')
+          else ...[
+            for (final partner in partners)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(child: Icon(Icons.person_rounded)),
+                title: Text(partner),
+                subtitle: const Text('Hesap birleşti'),
+              ),
+            for (final invite in invites)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(
+                  backgroundColor: AppColors.softPink,
+                  child: Icon(Icons.mail_outline_rounded),
+                ),
+                title: Text(
+                  invite.invitedDisplayName?.trim().isNotEmpty == true
+                      ? invite.invitedDisplayName!
+                      : invite.invitedEmail,
+                ),
+                subtitle: Text(
+                  '${invite.invitedEmail}\n${invite.roleLabel ?? 'Rol'} - ${invite.permissions.length} izin - Davet: ${invite.status.name}',
+                ),
+                isThreeLine: true,
+                trailing: _InviteActions(
+                  canEdit: canManagePermissions,
+                  canRemove:
+                      canRemoveMembers &&
+                      invite.acceptedUserId != currentUserId,
+                  onEdit: () => _editInvitePermissions(invite),
+                  onRemove: () => _confirmRemoveMember(invite),
+                ),
+              ),
+          ],
+          Wrap(
+            spacing: 8,
+            children: [
+              const Chip(label: Text('Paylaşım açık')),
+              Chip(label: Text(isOwner ? 'Yetki: Owner' : 'Yetki: Sınırlı')),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -498,6 +509,38 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     nameController.dispose();
   }
 
+  Future<void> _confirmRemoveMember(FamilyInvite invite) async {
+    final label = invite.invitedDisplayName?.trim().isNotEmpty == true
+        ? invite.invitedDisplayName!.trim()
+        : invite.invitedEmail;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Aile üyesini kaldır'),
+        content: Text(
+          '$label artık bu aile alanındaki kayıtları göremeyecek. Devam edilsin mi?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Kaldır'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(appControllerProvider).removeFamilyMember(invite.id);
+      if (mounted) showAppSnack(context, 'Aile üyesi kaldırıldı.');
+    } catch (error) {
+      if (mounted) showAppSnack(context, userFacingErrorMessage(error));
+    }
+  }
+
   String _supportedRoleLabel(String? value) {
     const roles = {
       'Ebeveyn',
@@ -536,6 +579,43 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
       ),
     );
     if (confirmed == true) await controller.logout();
+  }
+}
+
+class _InviteActions extends StatelessWidget {
+  const _InviteActions({
+    required this.canEdit,
+    required this.canRemove,
+    required this.onEdit,
+    required this.onRemove,
+  });
+
+  final bool canEdit;
+  final bool canRemove;
+  final VoidCallback onEdit;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!canEdit && !canRemove) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 2,
+      children: [
+        if (canEdit)
+          IconButton(
+            tooltip: 'Yetkileri düzenle',
+            icon: const Icon(Icons.tune_rounded),
+            onPressed: onEdit,
+          ),
+        if (canRemove)
+          IconButton(
+            tooltip: 'Aile üyesini kaldır',
+            icon: const Icon(Icons.person_remove_alt_1_rounded),
+            color: AppColors.danger,
+            onPressed: onRemove,
+          ),
+      ],
+    );
   }
 }
 

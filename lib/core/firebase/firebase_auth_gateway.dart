@@ -19,6 +19,7 @@ class AuthIdentity {
     required this.emailVerified,
     required this.providerId,
     this.avatarUrl,
+    this.phone,
   });
 
   final String id;
@@ -27,6 +28,7 @@ class AuthIdentity {
   final bool emailVerified;
   final String providerId;
   final String? avatarUrl;
+  final String? phone;
 }
 
 abstract class AuthGateway {
@@ -147,6 +149,7 @@ class LocalAuthGateway implements AuthGateway {
       identity.emailVerified ? 'true' : 'false',
       identity.providerId,
       identity.avatarUrl ?? '',
+      identity.phone ?? '',
     ].join('\n');
   }
 
@@ -160,6 +163,7 @@ class LocalAuthGateway implements AuthGateway {
       emailVerified: parts.length > 3 ? parts[3] == 'true' : true,
       providerId: parts.length > 4 ? parts[4] : 'password',
       avatarUrl: parts.length > 5 && parts[5].isNotEmpty ? parts[5] : null,
+      phone: parts.length > 6 && parts[6].isNotEmpty ? parts[6] : null,
     );
   }
 
@@ -331,6 +335,7 @@ class FirebaseAuthGateway implements AuthGateway {
       emailVerified: user.emailVerified || federatedVerified,
       providerId: providerId,
       avatarUrl: user.photoURL,
+      phone: user.phoneNumber,
     );
   }
 
@@ -342,7 +347,8 @@ class FirebaseAuthGateway implements AuthGateway {
   }
 
   bool get _allowDeveloperAuthFallback {
-    return kDebugMode || const bool.fromEnvironment('ALLOW_LOCAL_AUTH_FALLBACK');
+    return kDebugMode ||
+        const bool.fromEnvironment('ALLOW_LOCAL_AUTH_FALLBACK');
   }
 
   Future<AuthIdentity?> _developerGoogleFallback(Object error) async {

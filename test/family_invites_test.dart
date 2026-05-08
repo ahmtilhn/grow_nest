@@ -65,6 +65,38 @@ void main() {
     },
   );
 
+  test('owner can remove an accepted family member locally', () async {
+    final database = AppDatabase.inMemory();
+    addTearDown(database.close);
+    final repository = AppRepository(database);
+    await repository.seedContent();
+
+    await repository.loginLocal('sender@example.com', '123456');
+    await repository.completeBabyOnboarding(
+      parentName: 'Sender Parent',
+      babyName: 'Aylin',
+      birthDate: DateTime(2026, 1, 1),
+    );
+    await repository.loginLocal('invitee@example.com', '123456');
+    await repository.loginLocal('sender@example.com', '123456');
+    await repository.addFamilyPartner('invitee@example.com');
+
+    await repository.loginLocal('invitee@example.com', '123456');
+    final inviteId = (await repository.loadSnapshot()).invites.single.id;
+    await repository.acceptFamilyInvite(inviteId);
+
+    await repository.loginLocal('sender@example.com', '123456');
+    await repository.removeFamilyMember(inviteId);
+    final ownerSnapshot = await repository.loadSnapshot();
+
+    expect(
+      ownerSnapshot.family!.partnerUserIds,
+      isNot(contains('invitee@example.com')),
+    );
+    expect(ownerSnapshot.invites.single.status, FamilyInviteStatus.declined);
+    expect(ownerSnapshot.invites.single.acceptedUserId, isNull);
+  });
+
   test(
     'controller sends invite to Firebase before creating local success',
     () async {
@@ -779,6 +811,11 @@ class _FakeRemoteSyncService implements RemoteSyncService {
     required List<FamilyPermission> permissions,
   }) async {
     calls.add('updateFamilyInvitePermissions:${invite.id}');
+  }
+
+  @override
+  Future<void> removeFamilyMember(FamilyInvite invite) async {
+    calls.add('removeFamilyMember:${invite.id}');
   }
 
   @override

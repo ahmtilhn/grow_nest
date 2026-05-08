@@ -452,6 +452,18 @@ service cloud.firestore {
         );
     }
 
+    function validInviteRemoval(inviteDocId) {
+      return validInvite(request.resource.data, inviteDocId) &&
+        inviteIdentityUnchanged(inviteDocId) &&
+        canUsePermission(resource.data.familyId, 'removeUsers') &&
+        request.resource.data.status == 'declined' &&
+        !hasField(request.resource.data, 'acceptedUserId') &&
+        request.resource.data.respondedAt is timestamp &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
+        ]);
+    }
+
     function validNotification(data, notificationId) {
       return data.keys().hasOnly([
           'notificationId', 'familyId', 'targetUserIds', 'createdBy', 'type',
@@ -617,7 +629,8 @@ service cloud.firestore {
         (
           validInviteResponse(inviteDocId) ||
           validInvitePermissionUpdate(inviteDocId) ||
-          validInviteResend(inviteDocId)
+          validInviteResend(inviteDocId) ||
+          validInviteRemoval(inviteDocId)
         );
       allow delete: if false;
     }

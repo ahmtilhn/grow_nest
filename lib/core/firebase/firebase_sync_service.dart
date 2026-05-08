@@ -37,6 +37,7 @@ abstract class RemoteSyncService {
     String? roleLabel,
     required List<FamilyPermission> permissions,
   });
+  Future<void> removeFamilyMember(FamilyInvite invite);
   Future<void> acceptFamilyInvite(FamilyInvite invite);
   Future<void> declineFamilyInvite(FamilyInvite invite);
   Future<List<RemoteFamilyInvite>> fetchPendingFamilyInvites(String email);
@@ -109,6 +110,9 @@ class NoopRemoteSyncService implements RemoteSyncService {
     String? roleLabel,
     required List<FamilyPermission> permissions,
   }) async {}
+
+  @override
+  Future<void> removeFamilyMember(FamilyInvite invite) async {}
 
   @override
   Future<void> acceptFamilyInvite(FamilyInvite invite) async {}
@@ -472,6 +476,17 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
           .toList(),
       'updatedAt': firestore.FieldValue.serverTimestamp(),
     });
+  }
+
+  @override
+  Future<void> removeFamilyMember(FamilyInvite invite) {
+    _requireFirebaseUser();
+    return _familyInvites.doc(invite.id).set({
+      'status': 'declined',
+      'acceptedUserId': firestore.FieldValue.delete(),
+      'respondedAt': firestore.FieldValue.serverTimestamp(),
+      'updatedAt': firestore.FieldValue.serverTimestamp(),
+    }, firestore.SetOptions(merge: true));
   }
 
   @override

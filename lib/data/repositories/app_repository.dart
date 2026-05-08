@@ -630,23 +630,38 @@ class AppRepository {
     required String displayName,
     required bool emailVerified,
     String? avatarUrl,
+    String? phone,
   }) async {
     final now = DateTime.now();
     final normalizedEmail = email.trim().toLowerCase();
     final existing = await (_db.select(
       _db.users,
     )..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
+    final resolvedName = displayName.trim().isEmpty
+        ? existing?.name ?? 'MiniAdımlar'
+        : displayName.trim();
+    final resolvedAvatar = avatarUrl?.trim().isEmpty ?? true
+        ? existing?.avatarUrl
+        : avatarUrl!.trim();
+    final resolvedPhone = phone?.trim().isEmpty ?? true
+        ? existing?.phone
+        : phone!.trim();
     await _db
         .into(_db.users)
         .insertOnConflictUpdate(
           UsersCompanion.insert(
             id: id,
-            name: displayName.trim().isEmpty ? 'MiniAdımlar' : displayName,
+            name: resolvedName,
             email: normalizedEmail,
             emailVerified: Value(
               emailVerified || existing?.emailVerified == true,
             ),
-            avatarUrl: Value(avatarUrl),
+            avatarUrl: Value(resolvedAvatar),
+            birthDate: Value(existing?.birthDate),
+            phone: Value(resolvedPhone),
+            role: Value(existing?.role),
+            language: Value(existing?.language ?? 'tr'),
+            theme: Value(existing?.theme ?? 'light'),
             createdAt: existing?.createdAt ?? now,
           ),
         );
@@ -928,6 +943,53 @@ class AppRepository {
         permissionsJson: Value(_encodePermissions(permissions)),
       ),
     );
+  }
+
+  Future<void> removeFamilyMember(String inviteId) async {
+    final invite = await (_db.select(
+      _db.familyInvites,
+    )..where((tbl) => tbl.id.equals(inviteId))).getSingleOrNull();
+    if (invite == null) return;
+    final family = await (_db.select(
+      _db.families,
+    )..where((tbl) => tbl.id.equals(invite.familyId))).getSingleOrNull();
+    final userId = await _currentUserIdOrNull();
+    final normalizedEmail = invite.invitedEmail.trim().toLowerCase();
+    if (family != null) {
+      final partners = (jsonDecode(family.partnerUserIds) as List)
+          .map((item) => item.toString().trim().toLowerCase())
+          .where(
+            (item) =>
+                item.isNotEmpty &&
+                item != normalizedEmail &&
+                item != invite.acceptedUserId?.trim().toLowerCase(),
+          )
+          .toSet()
+          .toList();
+      await (_db.update(
+        _db.families,
+      )..where((tbl) => tbl.id.equals(family.id))).write(
+        FamiliesCompanion(partnerUserIds: Value(jsonEncode(partners))),
+      );
+    }
+    final now = DateTime.now();
+    await (_db.update(
+      _db.familyInvites,
+    )..where((tbl) => tbl.id.equals(inviteId))).write(
+      FamilyInvitesCompanion(
+        status: Value(FamilyInviteStatus.declined.name),
+        acceptedUserId: const Value<String?>(null),
+        respondedAt: Value(now),
+      ),
+    );
+    if (userId != null && invite.acceptedUserId == userId) {
+      await (_db.delete(_db.settingsRows)..where(
+            (tbl) =>
+                tbl.key.equals(_userSettingKey(userId, 'activeFamilyId')) &
+                tbl.value.equals(invite.familyId),
+          ))
+          .go();
+    }
   }
 
   Future<void> acceptFamilyInvite(String inviteId) async {

@@ -110,6 +110,7 @@ class AppController extends ChangeNotifier {
         displayName: identity.displayName,
         emailVerified: identity.emailVerified,
         avatarUrl: identity.avatarUrl,
+        phone: identity.phone,
       );
     }
     await load();
@@ -145,6 +146,7 @@ class AppController extends ChangeNotifier {
         displayName: name.trim().isEmpty ? identity.displayName : name.trim(),
         emailVerified: identity.emailVerified,
         avatarUrl: identity.avatarUrl,
+        phone: identity.phone,
       );
     }
     if (name.trim().isNotEmpty) {
@@ -183,6 +185,7 @@ class AppController extends ChangeNotifier {
       displayName: identity.displayName,
       emailVerified: identity.emailVerified,
       avatarUrl: identity.avatarUrl,
+      phone: identity.phone,
     );
     await load();
     await _syncCareState();
@@ -201,6 +204,7 @@ class AppController extends ChangeNotifier {
       displayName: identity.displayName,
       emailVerified: identity.emailVerified,
       avatarUrl: identity.avatarUrl,
+      phone: identity.phone,
     );
     await load();
     await _syncCareState();
@@ -538,6 +542,28 @@ class AppController extends ChangeNotifier {
       roleLabel: roleLabel,
       permissions: permissions,
     );
+    await load();
+  }
+
+  Future<void> removeFamilyMember(String inviteId) async {
+    _requireVerifiedAccount();
+    _requirePermission(FamilyPermission.removeUsers);
+    final invite = _inviteById(inviteId);
+    if (invite == null) {
+      throw const AppControllerException('Aile üyesi bulunamadı.');
+    }
+    if (invite.acceptedUserId == snapshot.user?.id) {
+      throw const AppControllerException(
+        'Kendi hesabınızı buradan çıkaramazsınız.',
+      );
+    }
+    if (remoteSync.isEnabled) {
+      await _runRequiredFirebaseAction(
+        () => remoteSync.removeFamilyMember(invite),
+        'Aile üyesi Firebase üzerinden kaldırılamadı. Lütfen tekrar deneyin.',
+      );
+    }
+    await _repository.removeFamilyMember(inviteId);
     await load();
   }
 
@@ -987,6 +1013,7 @@ class AppController extends ChangeNotifier {
         displayName: identity.displayName,
         emailVerified: true,
         avatarUrl: identity.avatarUrl,
+        phone: identity.phone,
       );
     }
     await load();
