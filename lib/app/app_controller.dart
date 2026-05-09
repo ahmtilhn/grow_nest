@@ -13,6 +13,7 @@ import '../core/sync/sync_queue.dart';
 import '../core/utils/app_calculators.dart';
 import '../data/repositories/app_repository.dart';
 import '../domain/entities/app_entities.dart';
+import '../domain/services/family_permission_policy.dart';
 
 final appControllerProvider = Provider<AppController>(
   (ref) => throw UnimplementedError(),
@@ -485,10 +486,23 @@ class AppController extends ChangeNotifier {
     if (user.email.trim().toLowerCase() == normalized) {
       throw ArgumentError('Kendi hesabınıza davet gönderemezsiniz.');
     }
+    final existingInvite = _inviteForFamilyEmail(family.id, normalized);
+    if (existingInvite != null) {
+      if (existingInvite.status == FamilyInviteStatus.accepted) {
+        throw const AppControllerException(
+          'Bu kullanıcı zaten bu aileye eklenmiş.',
+        );
+      }
+      if (existingInvite.status == FamilyInviteStatus.pending) {
+        throw const AppControllerException(
+          'Bu kullanıcı için bekleyen bir davet zaten var.',
+        );
+      }
+    }
     if (remoteSync.isEnabled) {
       await _runRequiredFirebaseAction(
         () async {
-          await _syncCareStateStrict();
+          await _syncInvitePrerequisitesStrict();
           await remoteSync.addFamilyPartner(
             familyId: family.id,
             familyOwnerUserId: family.ownerUserId,
@@ -622,6 +636,7 @@ class AppController extends ChangeNotifier {
     double? birthHeight,
     double? birthHeadCircumference,
   }) async {
+    _requireVerifiedAccount();
     _requirePermission(FamilyPermission.editBaby);
     await _repository.updateBabyProfile(
       babyId: babyId,
@@ -640,6 +655,7 @@ class AppController extends ChangeNotifier {
     required String pregnancyId,
     required DateTime dueDate,
   }) async {
+    _requireVerifiedAccount();
     await _repository.updatePregnancyProfile(
       pregnancyId: pregnancyId,
       dueDate: dueDate,
@@ -655,6 +671,7 @@ class AppController extends ChangeNotifier {
     double? height,
     double? headCircumference,
   }) async {
+    _requireVerifiedAccount();
     await _repository.completeBirthFromPregnancy(
       babyName: babyName.trim().isEmpty ? 'Bebek' : babyName.trim(),
       birthDate: birthDate,
@@ -667,6 +684,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> completeVaccine(String vaccineId, bool completed) async {
+    _requireVerifiedAccount();
     _requirePermission(FamilyPermission.addVaccine);
     await _repository.completeVaccine(vaccineId, completed);
     await load();
@@ -878,16 +896,15 @@ class AppController extends ChangeNotifier {
     await _syncCurrentPregnancy();
   }
 
-  Future<void> _syncCareStateStrict() async {
+  Future<void> _syncInvitePrerequisitesStrict() async {
     final user = snapshot.user;
     if (user == null) return;
     await remoteSync.syncUser(user);
     final family = snapshot.family;
-    if (family != null) await remoteSync.syncFamily(family);
+    if (family == null || family.ownerUserId != user.id) return;
+    await remoteSync.syncFamily(family);
     final baby = snapshot.baby;
     if (baby != null) await remoteSync.syncBaby(baby);
-    final pregnancy = snapshot.pregnancy;
-    if (pregnancy != null) await remoteSync.syncPregnancy(pregnancy);
   }
 
   Future<void> _syncCurrentUser() async {
@@ -924,22 +941,12 @@ class AppController extends ChangeNotifier {
   }
 
   bool hasPermission(FamilyPermission permission) {
-    final family = snapshot.family;
-    final user = snapshot.user;
-    if (family == null || user == null) return true;
-    if (family.ownerUserId == user.id) return true;
-    final email = user.email.trim().toLowerCase();
-    for (final invite in snapshot.invites) {
-      final matchesFamily = invite.familyId == family.id;
-      final accepted = invite.status == FamilyInviteStatus.accepted;
-      final matchesUser =
-          invite.acceptedUserId == user.id ||
-          invite.invitedEmail.trim().toLowerCase() == email;
-      if (matchesFamily && accepted && matchesUser) {
-        return invite.permissions.contains(permission);
-      }
-    }
-    return false;
+    return FamilyPermissionPolicy.hasPermission(
+      family: snapshot.family,
+      user: snapshot.user,
+      invites: snapshot.invites,
+      permission: permission,
+    );
   }
 
   void _requirePermission(FamilyPermission permission) {
@@ -954,17 +961,7 @@ class AppController extends ChangeNotifier {
       _requirePermission(FamilyPermission.editRecords);
       return;
     }
-    final permission = switch (type) {
-      RecordType.feeding => FamilyPermission.addFeeding,
-      RecordType.diaper => FamilyPermission.addDiaper,
-      RecordType.sleep => FamilyPermission.manageSleep,
-      RecordType.growth => FamilyPermission.addGrowth,
-      RecordType.appointment => FamilyPermission.addAppointment,
-      RecordType.memory => FamilyPermission.addMemory,
-      RecordType.reminder => FamilyPermission.addAppointment,
-      _ => FamilyPermission.editRecords,
-    };
-    _requirePermission(permission);
+    _requirePermission(FamilyPermissionPolicy.createPermissionForRecord(type));
   }
 
   void _requireReminderPermission(ReminderCategory category) {
@@ -1051,6 +1048,17 @@ class AppController extends ChangeNotifier {
   FamilyInvite? _inviteById(String inviteId) {
     for (final invite in snapshot.invites) {
       if (invite.id == inviteId) return invite;
+    }
+    return null;
+  }
+
+  FamilyInvite? _inviteForFamilyEmail(String familyId, String email) {
+    final normalized = email.trim().toLowerCase();
+    for (final invite in snapshot.invites) {
+      if (invite.familyId != familyId) continue;
+      if (invite.invitedEmail.trim().toLowerCase() != normalized) continue;
+      if (invite.status == FamilyInviteStatus.declined) continue;
+      return invite;
     }
     return null;
   }

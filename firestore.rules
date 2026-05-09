@@ -121,6 +121,12 @@ service cloud.firestore {
         data[field] is number;
     }
 
+    function validOptionalMap(data, field) {
+      return !hasField(data, field) ||
+        data[field] == null ||
+        data[field] is map;
+    }
+
     function validStringList(value, maxSize) {
       return value is list &&
         value.size() <= maxSize;
@@ -491,7 +497,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           'notificationId', 'familyId', 'targetUserIds', 'createdBy', 'type',
           'category', 'title', 'body', 'payload', 'readBy', 'seenBy',
-          'isDeleted', 'createdAt', 'updatedAt'
+          'isReadBy', 'isDeleted', 'createdAt', 'updatedAt'
         ]) &&
         data.notificationId == notificationId &&
         validString(data, 'familyId', 1, 120) &&
@@ -504,6 +510,7 @@ service cloud.firestore {
         validOptionalString(data, 'payload', 200) &&
         validStringList(data.readBy, 20) &&
         validStringList(data.seenBy, 20) &&
+        validOptionalMap(data, 'isReadBy') &&
         data.isDeleted is bool &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
@@ -511,14 +518,16 @@ service cloud.firestore {
 
     function validNotificationToken(data, tokenId) {
       return data.keys().hasOnly([
-          'id', 'userId', 'familyId', 'token', 'platform', 'enabled',
-          'updatedAt'
+          'id', 'userId', 'uid', 'familyId', 'token', 'platform', 'deviceId',
+          'enabled', 'updatedAt'
         ]) &&
         data.id == tokenId &&
         data.userId == request.auth.uid &&
+        (!hasField(data, 'uid') || data.uid == request.auth.uid) &&
         validOptionalString(data, 'familyId', 120) &&
         validString(data, 'token', 20, 4096) &&
         validString(data, 'platform', 1, 30) &&
+        validOptionalString(data, 'deviceId', 120) &&
         data.enabled is bool &&
         data.updatedAt is timestamp;
     }
@@ -595,7 +604,10 @@ service cloud.firestore {
         request.resource.data.babyId == resource.data.babyId &&
         request.resource.data.createdAt == resource.data.createdAt &&
         (
-          resource.data.createdByUserId == request.auth.uid ||
+          (
+            !(request.resource.data.deletedAt is timestamp) &&
+            resource.data.createdByUserId == request.auth.uid
+          ) ||
           (resource.data.familyId is string &&
             (
               (
@@ -612,8 +624,17 @@ service cloud.firestore {
       allow read: if signedIn() && canReadFamily(resource.data.familyId);
       allow create, update: if signedIn() &&
         validReminder(request.resource.data, reminderId) &&
-        canUsePermission(request.resource.data.familyId, 'addAppointment') &&
         request.resource.data.updatedByUserId == request.auth.uid &&
+        (
+          (
+            request.resource.data.deletedAt is timestamp &&
+            canUsePermission(request.resource.data.familyId, 'deleteRecords')
+          ) ||
+          (
+            !(request.resource.data.deletedAt is timestamp) &&
+            canUsePermission(request.resource.data.familyId, 'addAppointment')
+          )
+        ) &&
         (!exists(/databases/$(database)/documents/reminders/$(reminderId)) ||
           (request.resource.data.id == resource.data.id &&
             request.resource.data.familyId == resource.data.familyId &&
@@ -645,6 +666,7 @@ service cloud.firestore {
           resource.data.invitedEmail == authEmail() ||
           resource.data.acceptedUserId == request.auth.uid ||
           isFamilyOwner(resource.data.familyId) ||
+          canUsePermission(resource.data.familyId, 'inviteUsers') ||
           canUsePermission(resource.data.familyId, 'manageUserPermissions'));
       allow create: if signedIn() &&
         validNewInvite(request.resource.data, inviteDocId);
@@ -672,6 +694,29 @@ service cloud.firestore {
         validNotification(request.resource.data, notificationId) &&
         request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['readBy', 'seenBy', 'updatedAt']) &&
+        request.resource.data.readBy.hasAll(resource.data.readBy) &&
+        request.resource.data.seenBy.hasAll(resource.data.seenBy) &&
+        request.resource.data.readBy.hasAny([request.auth.uid]) &&
+        request.resource.data.seenBy.hasAny([request.auth.uid]);
+      allow delete: if false;
+    }
+
+    match /families/{familyId}/notifications/{notificationId} {
+      allow read: if signedIn() &&
+        resource.data.familyId == familyId &&
+        resource.data.targetUserIds.hasAny([request.auth.uid]) &&
+        (canUsePermission(familyId, 'viewNotifications') ||
+          canReadInviteNotification(resource.data));
+      allow create: if false;
+      allow update: if signedIn() &&
+        resource.data.familyId == familyId &&
+        resource.data.targetUserIds.hasAny([request.auth.uid]) &&
+        (canUsePermission(familyId, 'viewNotifications') ||
+          canReadInviteNotification(resource.data)) &&
+        validNotification(request.resource.data, notificationId) &&
+        request.resource.data.familyId == familyId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['readBy', 'seenBy', 'isReadBy', 'updatedAt']) &&
         request.resource.data.readBy.hasAll(resource.data.readBy) &&
         request.resource.data.seenBy.hasAll(resource.data.seenBy) &&
         request.resource.data.readBy.hasAny([request.auth.uid]) &&

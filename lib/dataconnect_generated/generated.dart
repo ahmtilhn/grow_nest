@@ -3,16 +3,6 @@ import 'package:firebase_data_connect/firebase_data_connect.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 
-part 'get_my_profile.dart';
-
-part 'list_my_families.dart';
-
-part 'list_pending_invites_for_me.dart';
-
-part 'get_my_pregnancy.dart';
-
-part 'list_family_records.dart';
-
 part 'upsert_current_user.dart';
 
 part 'upsert_family.dart';
@@ -29,6 +19,16 @@ part 'upsert_pregnancy.dart';
 
 part 'upsert_tracker_record.dart';
 
+part 'get_my_profile.dart';
+
+part 'list_my_families.dart';
+
+part 'list_pending_invites_for_me.dart';
+
+part 'get_my_pregnancy.dart';
+
+part 'list_family_records.dart';
+
 
 
 
@@ -36,31 +36,6 @@ part 'upsert_tracker_record.dart';
 
 
 class ExampleConnector {
-  
-  
-  GetMyProfileVariablesBuilder getMyProfile () {
-    return GetMyProfileVariablesBuilder(dataConnect, );
-  }
-  
-  
-  ListMyFamiliesVariablesBuilder listMyFamilies () {
-    return ListMyFamiliesVariablesBuilder(dataConnect, );
-  }
-  
-  
-  ListPendingInvitesForMeVariablesBuilder listPendingInvitesForMe ({required String email, }) {
-    return ListPendingInvitesForMeVariablesBuilder(dataConnect, email: email,);
-  }
-  
-  
-  GetMyPregnancyVariablesBuilder getMyPregnancy () {
-    return GetMyPregnancyVariablesBuilder(dataConnect, );
-  }
-  
-  
-  ListFamilyRecordsVariablesBuilder listFamilyRecords ({required String familyId, }) {
-    return ListFamilyRecordsVariablesBuilder(dataConnect, familyId: familyId,);
-  }
   
   
   UpsertCurrentUserVariablesBuilder upsertCurrentUser ({required String email, required String language, required String theme, }) {
@@ -100,6 +75,31 @@ class ExampleConnector {
   
   UpsertTrackerRecordVariablesBuilder upsertTrackerRecord ({required String id, required String type, required String title, required Timestamp occurredAt, }) {
     return UpsertTrackerRecordVariablesBuilder(dataConnect, id: id,type: type,title: title,occurredAt: occurredAt,);
+  }
+  
+  
+  GetMyProfileVariablesBuilder getMyProfile () {
+    return GetMyProfileVariablesBuilder(dataConnect, );
+  }
+  
+  
+  ListMyFamiliesVariablesBuilder listMyFamilies () {
+    return ListMyFamiliesVariablesBuilder(dataConnect, );
+  }
+  
+  
+  ListPendingInvitesForMeVariablesBuilder listPendingInvitesForMe ({required String email, }) {
+    return ListPendingInvitesForMeVariablesBuilder(dataConnect, email: email,);
+  }
+  
+  
+  GetMyPregnancyVariablesBuilder getMyPregnancy () {
+    return GetMyPregnancyVariablesBuilder(dataConnect, );
+  }
+  
+  
+  ListFamilyRecordsVariablesBuilder listFamilyRecords ({required String familyId, }) {
+    return ListFamilyRecordsVariablesBuilder(dataConnect, familyId: familyId,);
   }
   
 

@@ -278,7 +278,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
           if (!canInvite) ...[
             const SizedBox(height: 8),
             const Text(
-              'Davet göndermek için owner veya davet yetkisi gerekir.',
+              'Bu aileye yeni üye davet etme yetkiniz yok.',
               style: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
           ],
@@ -295,6 +295,33 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
     required bool isOwner,
     String? currentUserId,
   }) {
+    final activeInvites = _uniqueInvites(
+      invites.where((invite) => invite.status == FamilyInviteStatus.accepted),
+    );
+    final pendingInvites =
+        _uniqueInvites(
+          invites.where(
+            (invite) => invite.status == FamilyInviteStatus.pending,
+          ),
+        ).where((invite) {
+          final email = invite.invitedEmail.trim().toLowerCase();
+          return !activeInvites.any(
+            (active) => active.invitedEmail.trim().toLowerCase() == email,
+          );
+        }).toList();
+    final activeInviteEmails = activeInvites
+        .map((invite) => invite.invitedEmail.trim().toLowerCase())
+        .toSet();
+    final legacyPartners = partners
+        .map((partner) => partner.trim())
+        .where((partner) => partner.isNotEmpty)
+        .where((partner) => !activeInviteEmails.contains(partner.toLowerCase()))
+        .toSet()
+        .toList();
+    final hasMembers =
+        activeInvites.isNotEmpty ||
+        pendingInvites.isNotEmpty ||
+        legacyPartners.isNotEmpty;
     return AppCard(
       color: AppColors.softGreen,
       borderColor: const Color(0xFFD3E3DC),
@@ -306,10 +333,34 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
-          if (partners.isEmpty && invites.isEmpty)
+          if (!hasMembers)
             const Text('Henüz ortak eklenmedi.')
           else ...[
-            for (final partner in partners)
+            if (activeInvites.isNotEmpty) _sectionLabel('Aktif üyeler'),
+            for (final invite in activeInvites)
+              ListTile(
+                key: ValueKey('member-${invite.id}'),
+                contentPadding: EdgeInsets.zero,
+                leading: const CircleAvatar(child: Icon(Icons.person_rounded)),
+                title: Text(
+                  invite.invitedDisplayName?.trim().isNotEmpty == true
+                      ? invite.invitedDisplayName!
+                      : invite.invitedEmail,
+                ),
+                subtitle: Text(
+                  '${invite.invitedEmail}\n${invite.roleLabel ?? 'Rol'} - ${invite.permissions.length} izin',
+                ),
+                isThreeLine: true,
+                trailing: _InviteActions(
+                  canEdit: canManagePermissions,
+                  canRemove:
+                      canRemoveMembers &&
+                      invite.acceptedUserId != currentUserId,
+                  onEdit: () => _editInvitePermissions(invite),
+                  onRemove: () => _confirmRemoveMember(invite),
+                ),
+              ),
+            for (final partner in legacyPartners)
               ListTile(
                 key: ValueKey('partner-$partner'),
                 contentPadding: EdgeInsets.zero,
@@ -317,7 +368,8 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                 title: Text(partner),
                 subtitle: const Text('Hesap birleşti'),
               ),
-            for (final invite in invites)
+            if (pendingInvites.isNotEmpty) _sectionLabel('Bekleyen davetler'),
+            for (final invite in pendingInvites)
               ListTile(
                 key: ValueKey('invite-${invite.id}'),
                 contentPadding: EdgeInsets.zero,
@@ -331,7 +383,7 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
                       : invite.invitedEmail,
                 ),
                 subtitle: Text(
-                  '${invite.invitedEmail}\n${invite.roleLabel ?? 'Rol'} - ${invite.permissions.length} izin - Davet: ${invite.status.name}',
+                  '${invite.invitedEmail}\n${invite.roleLabel ?? 'Rol'} - ${invite.permissions.length} izin',
                 ),
                 isThreeLine: true,
                 trailing: _InviteActions(
@@ -352,6 +404,31 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  List<FamilyInvite> _uniqueInvites(Iterable<FamilyInvite> invites) {
+    final byIdentity = <String, FamilyInvite>{};
+    for (final invite in invites) {
+      final identity = (invite.acceptedUserId?.trim().isNotEmpty == true
+          ? 'uid:${invite.acceptedUserId}'
+          : 'email:${invite.invitedEmail.trim().toLowerCase()}');
+      byIdentity[identity] = invite;
+    }
+    return byIdentity.values.toList();
+  }
+
+  Widget _sectionLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 4),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppColors.muted,
+          fontSize: 12,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }

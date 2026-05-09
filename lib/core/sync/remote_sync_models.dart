@@ -11,6 +11,8 @@ class RemoteFamilyInvite {
     this.roleLabel,
     this.permissions = const [],
     this.acceptedUserId,
+    this.status = 'pending',
+    this.respondedAt,
   });
 
   String get id => 'invite-$familyId-${invitedEmail.trim().toLowerCase()}';
@@ -25,7 +27,9 @@ class RemoteFamilyInvite {
   final String? roleLabel;
   final List<String> permissions;
   final String? acceptedUserId;
+  final String status;
   final DateTime createdAt;
+  final DateTime? respondedAt;
 }
 
 class RemoteFamilySummary {

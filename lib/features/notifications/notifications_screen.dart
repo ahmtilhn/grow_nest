@@ -25,7 +25,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       final controller = ref.read(appControllerProvider);
       await controller.refreshFamilyInvites();
       await controller.refreshRemoteFamilies();
-      await controller.markAllNotificationsRead();
     });
   }
 
@@ -34,8 +33,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     ref.watch(appSnapshotProvider);
     final controller = ref.read(appControllerProvider);
     final items = controller.snapshot.notifications
-        .where((item) => _filter == 'all' || item.category == _filter)
+        .where(_matchesFilter)
         .toList();
+    items.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final unreadCount = controller.snapshot.notifications
+        .where((item) => item.status == AppNotificationStatus.unread)
+        .length;
 
     return Scaffold(
       appBar: AppBar(
@@ -44,6 +47,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: const Text('Bildirimler'),
+        actions: [
+          TextButton.icon(
+            onPressed: unreadCount == 0
+                ? null
+                : () => controller.markAllNotificationsRead(),
+            icon: const Icon(Icons.done_all_rounded),
+            label: const Text('Tümünü okundu yap'),
+          ),
+        ],
       ),
       body: AppScreen(
         title: 'Bildirimler',
@@ -55,9 +67,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             runSpacing: 8,
             children: [
               _FilterChip('all', 'Tümü', _filter, _setFilter),
-              _FilterChip('system', 'Sistem', _filter, _setFilter),
               _FilterChip('family', 'Aile', _filter, _setFilter),
-              _FilterChip('health', 'Sağlık', _filter, _setFilter),
+              _FilterChip('baby', 'Bebek kayıtları', _filter, _setFilter),
+              _FilterChip('invites', 'Davetler', _filter, _setFilter),
+              _FilterChip('reminders', 'Hatırlatıcılar', _filter, _setFilter),
+              _FilterChip('system', 'Sistem', _filter, _setFilter),
             ],
           ),
           const SizedBox(height: 22),
@@ -89,7 +103,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   child: _NotificationCard(
                     notification: item,
                     invite: _inviteFor(controller.snapshot.invites, item),
-                    onRead: () => controller.markNotificationRead(item.id),
+                    onTap: () => _openNotification(controller, item),
                     onAccept: () => _respondToInvite(
                       controller,
                       item.payload,
@@ -110,6 +124,42 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   void _setFilter(String filter) => setState(() => _filter = filter);
+
+  bool _matchesFilter(AppNotification item) {
+    return switch (_filter) {
+      'all' => true,
+      'invites' => item.type.contains('invite'),
+      'baby' =>
+        item.type.contains('record') ||
+            item.type.contains('vaccine') ||
+            item.category == 'health',
+      'reminders' => item.type.contains('reminder'),
+      'family' => item.category == 'family' && !item.type.contains('invite'),
+      'system' => item.category == 'system',
+      _ => item.category == _filter,
+    };
+  }
+
+  Future<void> _openNotification(
+    AppController controller,
+    AppNotification notification,
+  ) async {
+    await controller.markNotificationRead(notification.id);
+    if (!mounted) return;
+    final route = _routeFor(notification);
+    if (route != null) context.push(route);
+  }
+
+  String? _routeFor(AppNotification notification) {
+    if (notification.type.contains('invite')) return '/family';
+    if (notification.type.contains('vaccine')) return '/vaccines';
+    if (notification.type.contains('reminder')) {
+      final id = notification.payload;
+      return id == null ? '/reminder/new' : '/reminder/new?id=$id';
+    }
+    if (notification.type.contains('record')) return '/tracker';
+    return null;
+  }
 
   Future<void> _respondToInvite(
     AppController controller,
@@ -199,14 +249,14 @@ class _NotificationCard extends StatelessWidget {
   const _NotificationCard({
     required this.notification,
     required this.invite,
-    required this.onRead,
+    required this.onTap,
     required this.onAccept,
     required this.onDecline,
   });
 
   final AppNotification notification;
   final FamilyInvite? invite;
-  final VoidCallback onRead;
+  final VoidCallback onTap;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
 
@@ -217,8 +267,9 @@ class _NotificationCard extends StatelessWidget {
         notification.type == 'family_invite' &&
         invite?.status == FamilyInviteStatus.pending;
     return AppCard(
-      onTap: unread ? onRead : null,
+      onTap: onTap,
       borderColor: unread ? const Color(0xFFBDE8F7) : AppColors.border,
+      color: unread ? const Color(0xFFF5FCFF) : AppColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -233,6 +284,17 @@ class _NotificationCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
+                        if (unread) ...[
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                         Expanded(
                           child: Text(
                             notification.title,
@@ -252,6 +314,15 @@ class _NotificationCard extends StatelessWidget {
                     Text(
                       notification.body,
                       style: const TextStyle(color: AppColors.muted),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        Chip(label: Text(_label(notification))),
+                        if (unread) const Chip(label: Text('Okunmadı')),
+                      ],
                     ),
                   ],
                 ),
@@ -298,6 +369,14 @@ class _NotificationCard extends StatelessWidget {
     'health' => Icons.health_and_safety_outlined,
     _ => Icons.notifications_none_rounded,
   };
+
+  String _label(AppNotification notification) {
+    if (notification.type.contains('invite')) return 'Davet';
+    if (notification.type.contains('record')) return 'Bebek kaydı';
+    if (notification.type.contains('reminder')) return 'Hatırlatıcı';
+    if (notification.type.contains('vaccine')) return 'Aşı';
+    return 'Sistem';
+  }
 
   String _time(DateTime time) =>
       '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';

@@ -6,6 +6,7 @@ import '../../core/sync/remote_sync_models.dart';
 import '../../core/sync/sync_queue.dart';
 import '../../domain/entities/app_entities.dart';
 import '../../domain/entities/app_entities.dart' as domain;
+import '../../domain/services/family_permission_policy.dart';
 import '../local/app_database.dart'
     hide AppNotification, FamilyInvite, VaccineEvent;
 
@@ -104,14 +105,104 @@ class AppRepository {
                 familyRow != null && invite.familyId == familyRow.id;
             return emailMatches || sentByUser || sameFamily;
           }).toList();
+    final userEntity = userRow == null
+        ? null
+        : UserProfile(
+            id: userRow.id,
+            name: userRow.name,
+            email: userRow.email,
+            emailVerified: userRow.emailVerified,
+            avatarUrl: userRow.avatarUrl,
+            birthDate: userRow.birthDate,
+            phone: userRow.phone,
+            role: userRow.role,
+            createdAt: userRow.createdAt,
+            language: userRow.language,
+            theme: userRow.theme,
+          );
+    final familyEntity = familyRow == null
+        ? null
+        : domain.Family(
+            id: familyRow.id,
+            ownerUserId: familyRow.ownerUserId,
+            partnerUserIds: (jsonDecode(familyRow.partnerUserIds) as List)
+                .map((e) => e.toString())
+                .toList(),
+            activeBabyId: familyRow.activeBabyId,
+            createdAt: familyRow.createdAt,
+          );
+    final inviteEntities = invites
+        .map(
+          (row) => domain.FamilyInvite(
+            id: row.id,
+            familyId: row.familyId,
+            invitedEmail: row.invitedEmail,
+            invitedByUserId: row.invitedByUserId,
+            invitedByName: row.invitedByName,
+            invitedDisplayName: row.invitedDisplayName,
+            roleLabel: row.roleLabel,
+            permissions: _decodePermissions(row.permissionsJson),
+            acceptedUserId: row.acceptedUserId,
+            status: FamilyInviteStatus.values.byName(row.status),
+            createdAt: row.createdAt,
+            respondedAt: row.respondedAt,
+          ),
+        )
+        .toList();
+    final familyPermissions = FamilyPermissionPolicy.permissionsFor(
+      family: familyEntity,
+      user: userEntity,
+      invites: inviteEntities,
+    );
+    final visibleBabyRow =
+        babyRow != null &&
+            (familyEntity == null ||
+                babyRow.familyId != familyEntity.id ||
+                FamilyPermissionPolicy.canViewBaby(
+                  permissions: familyPermissions,
+                ))
+        ? babyRow
+        : null;
+    final visibleRecords = records.where((row) {
+      if (familyEntity == null || row.familyId != familyEntity.id) {
+        return true;
+      }
+      return FamilyPermissionPolicy.canViewRecord(
+        _safeRecordType(row.type),
+        permissions: familyPermissions,
+      );
+    }).toList();
+    final visibleReminders = reminders.where((row) {
+      if (familyEntity == null || row.familyId != familyEntity.id) {
+        return true;
+      }
+      return FamilyPermissionPolicy.canViewReminder(
+        _safeReminderCategory(row.category),
+        permissions: familyPermissions,
+      );
+    }).toList();
+    final visibleNotifications = notifications.where((row) {
+      if (row.type == 'family_invite') return true;
+      if (familyEntity == null || row.familyId != familyEntity.id) {
+        return true;
+      }
+      return FamilyPermissionPolicy.canViewNotifications(
+        permissions: familyPermissions,
+      );
+    }).toList();
     final vaccines = babyRow == null
         ? const []
         : await (_db.select(_db.vaccineEvents)
                 ..where((tbl) => tbl.babyId.equals(babyRow.id))
                 ..orderBy([(tbl) => OrderingTerm.asc(tbl.dueDate)]))
               .get();
+    final visibleVaccines = visibleBabyRow == null
+        ? const []
+        : vaccines.where((row) {
+            return familyPermissions.contains(FamilyPermission.viewVaccines);
+          }).toList();
     final articles = await _loadArticles();
-    final effectiveMode = babyRow != null
+    final effectiveMode = visibleBabyRow != null
         ? CareMode.baby.name
         : pregnancyRow != null
         ? CareMode.pregnancy.name
@@ -124,47 +215,23 @@ class AppRepository {
             _settingForUser(settingMap, 'onboardingComplete', userRow.id) ==
                 'true');
     return AppSnapshot(
-      user: userRow == null
-          ? null
-          : UserProfile(
-              id: userRow.id,
-              name: userRow.name,
-              email: userRow.email,
-              emailVerified: userRow.emailVerified,
-              avatarUrl: userRow.avatarUrl,
-              birthDate: userRow.birthDate,
-              phone: userRow.phone,
-              role: userRow.role,
-              createdAt: userRow.createdAt,
-              language: userRow.language,
-              theme: userRow.theme,
-            ),
-      family: familyRow == null
-          ? null
-          : domain.Family(
-              id: familyRow.id,
-              ownerUserId: familyRow.ownerUserId,
-              partnerUserIds: (jsonDecode(familyRow.partnerUserIds) as List)
-                  .map((e) => e.toString())
-                  .toList(),
-              activeBabyId: familyRow.activeBabyId,
-              createdAt: familyRow.createdAt,
-            ),
-      baby: babyRow == null
+      user: userEntity,
+      family: familyEntity,
+      baby: visibleBabyRow == null
           ? null
           : BabyProfile(
-              id: babyRow.id,
-              familyId: babyRow.familyId,
-              name: babyRow.name,
-              birthDate: babyRow.birthDate,
-              gender: babyRow.gender,
-              birthWeight: babyRow.birthWeight,
-              birthHeight: babyRow.birthHeight,
-              birthHeadCircumference: babyRow.birthHeadCircumference,
-              currentWeight: babyRow.currentWeight,
-              currentHeight: babyRow.currentHeight,
-              currentHeadCircumference: babyRow.currentHeadCircumference,
-              createdAt: babyRow.createdAt,
+              id: visibleBabyRow.id,
+              familyId: visibleBabyRow.familyId,
+              name: visibleBabyRow.name,
+              birthDate: visibleBabyRow.birthDate,
+              gender: visibleBabyRow.gender,
+              birthWeight: visibleBabyRow.birthWeight,
+              birthHeight: visibleBabyRow.birthHeight,
+              birthHeadCircumference: visibleBabyRow.birthHeadCircumference,
+              currentWeight: visibleBabyRow.currentWeight,
+              currentHeight: visibleBabyRow.currentHeight,
+              currentHeadCircumference: visibleBabyRow.currentHeadCircumference,
+              createdAt: visibleBabyRow.createdAt,
             ),
       pregnancy: pregnancyRow == null
           ? null
@@ -182,7 +249,7 @@ class AppRepository {
           _settingForUser(settingMap, 'localeCode', userRow?.id) ??
           userRow?.language ??
           'tr',
-      records: records
+      records: visibleRecords
           .map(
             (row) => domain.TrackerRecord(
               id: row.id,
@@ -203,7 +270,7 @@ class AppRepository {
             ),
           )
           .toList(),
-      reminders: reminders
+      reminders: visibleReminders
           .map(
             (row) => ReminderItem(
               id: row.id,
@@ -217,7 +284,7 @@ class AppRepository {
             ),
           )
           .toList(),
-      notifications: notifications
+      notifications: visibleNotifications
           .map(
             (row) => domain.AppNotification(
               id: row.id,
@@ -238,25 +305,8 @@ class AppRepository {
             ),
           )
           .toList(),
-      invites: invites
-          .map(
-            (row) => domain.FamilyInvite(
-              id: row.id,
-              familyId: row.familyId,
-              invitedEmail: row.invitedEmail,
-              invitedByUserId: row.invitedByUserId,
-              invitedByName: row.invitedByName,
-              invitedDisplayName: row.invitedDisplayName,
-              roleLabel: row.roleLabel,
-              permissions: _decodePermissions(row.permissionsJson),
-              acceptedUserId: row.acceptedUserId,
-              status: FamilyInviteStatus.values.byName(row.status),
-              createdAt: row.createdAt,
-              respondedAt: row.respondedAt,
-            ),
-          )
-          .toList(),
-      vaccines: vaccines
+      invites: inviteEntities,
+      vaccines: visibleVaccines
           .map(
             (row) => domain.VaccineEvent(
               id: row.id,
@@ -1539,8 +1589,9 @@ class AppRepository {
             roleLabel: Value(invite.roleLabel),
             permissionsJson: Value(_encodeStringList(invite.permissions)),
             acceptedUserId: Value(invite.acceptedUserId),
-            status: Value(FamilyInviteStatus.pending.name),
+            status: Value(invite.status),
             createdAt: invite.createdAt,
+            respondedAt: Value(invite.respondedAt),
           ),
         );
   }
@@ -1769,9 +1820,9 @@ class AppRepository {
               roleLabel: Value(invite.roleLabel),
               permissionsJson: Value(_encodeStringList(invite.permissions)),
               acceptedUserId: Value(invite.acceptedUserId),
-              status: Value(FamilyInviteStatus.accepted.name),
+              status: Value(invite.status),
               createdAt: invite.createdAt,
-              respondedAt: Value(DateTime.now()),
+              respondedAt: Value(invite.respondedAt),
             ),
           );
     }

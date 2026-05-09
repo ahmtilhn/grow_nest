@@ -42,6 +42,7 @@ exports.notifyOnTrackerRecordCreated = onDocumentCreated("trackerRecords/{record
   await notifyFamily({
     familyId: record.familyId,
     actorId: record.createdByUserId,
+    visibilityPermission: permissionForRecordType(record.type),
     type: "family_record",
     title: "Yeni aile kaydı",
     body: `${actorName(record.createdByName)} ${record.title || "bir kayıt"} ekledi.`,
@@ -57,6 +58,7 @@ exports.notifyOnTrackerRecordUpdated = onDocumentUpdated("trackerRecords/{record
     await notifyFamily({
       familyId: after.familyId,
       actorId: after.updatedByUserId,
+      visibilityPermission: permissionForRecordType(after.type),
       type: "family_record_deleted",
       title: "Kayıt silindi",
       body: `${actorName(after.updatedByName || after.createdByName)} ${after.title || "bir kaydı"} sildi.`,
@@ -68,6 +70,7 @@ exports.notifyOnTrackerRecordUpdated = onDocumentUpdated("trackerRecords/{record
   await notifyFamily({
     familyId: after.familyId,
     actorId: after.updatedByUserId,
+    visibilityPermission: permissionForRecordType(after.type),
     type: "family_record_update",
     title: "Aile kaydı güncellendi",
     body: `${actorName(after.updatedByName || after.createdByName)} ${after.title || "bir kaydı"} güncelledi.`,
@@ -81,6 +84,7 @@ exports.notifyOnReminderCreated = onDocumentCreated("reminders/{reminderId}", as
   await notifyFamily({
     familyId: reminder.familyId,
     actorId: reminder.createdByUserId,
+    visibilityPermission: permissionForReminderCategory(reminder.category),
     type: "family_reminder",
     title: "Yeni randevu/hatırlatıcı",
     body: `${actorName(reminder.createdByName)} ${reminder.title || "bir hatırlatıcı"} oluşturdu.`,
@@ -88,8 +92,53 @@ exports.notifyOnReminderCreated = onDocumentCreated("reminders/{reminderId}", as
   });
 });
 
-async function notifyFamily({ familyId, actorId, type, title, body, payload }) {
-  const targetUserIds = await notificationTargetsForFamily(familyId, actorId);
+exports.notifyOnReminderUpdated = onDocumentUpdated("reminders/{reminderId}", async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+  if (!after.familyId) return;
+  if (!before.deletedAt && after.deletedAt) {
+    await notifyFamily({
+      familyId: after.familyId,
+      actorId: after.updatedByUserId,
+      visibilityPermission: permissionForReminderCategory(after.category),
+      type: "family_reminder_deleted",
+      title: "Hatırlatıcı silindi",
+      body: `${actorName(after.updatedByName || after.createdByName)} ${after.title || "bir hatırlatıcıyı"} sildi.`,
+      payload: event.params.reminderId,
+    });
+    return;
+  }
+  if (before.updatedAt && after.updatedAt && before.updatedAt.isEqual(after.updatedAt)) return;
+  await notifyFamily({
+    familyId: after.familyId,
+    actorId: after.updatedByUserId,
+    visibilityPermission: permissionForReminderCategory(after.category),
+    type: "family_reminder_update",
+    title: "Hatırlatıcı güncellendi",
+    body: `${actorName(after.updatedByName || after.createdByName)} ${after.title || "bir hatırlatıcıyı"} güncelledi.`,
+    payload: event.params.reminderId,
+  });
+});
+
+exports.notifyOnVaccineUpdated = onDocumentUpdated("vaccineEvents/{vaccineId}", async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+  if (before.updatedAt && after.updatedAt && before.updatedAt.isEqual(after.updatedAt)) return;
+  const familyId = await familyIdForBaby(after.babyId);
+  if (!familyId) return;
+  await notifyFamily({
+    familyId,
+    actorId: after.updatedByUserId,
+    visibilityPermission: "viewVaccines",
+    type: "family_vaccine_update",
+    title: "Aşı takvimi güncellendi",
+    body: `${actorName(after.updatedByName)} ${after.title || "bir aşı kaydını"} güncelledi.`,
+    payload: event.params.vaccineId,
+  });
+});
+
+async function notifyFamily({ familyId, actorId, visibilityPermission, type, title, body, payload }) {
+  const targetUserIds = await notificationTargetsForFamily(familyId, actorId, visibilityPermission);
   await createAndSendNotification({
     familyId,
     targetUserIds,
@@ -101,7 +150,7 @@ async function notifyFamily({ familyId, actorId, type, title, body, payload }) {
   });
 }
 
-async function notificationTargetsForFamily(familyId, actorId) {
+async function notificationTargetsForFamily(familyId, actorId, visibilityPermission) {
   const family = await db.collection("families").doc(familyId).get();
   if (!family.exists) return [];
   const ownerId = family.get("ownerUserId");
@@ -112,7 +161,7 @@ async function notificationTargetsForFamily(familyId, actorId) {
   const targetUserIds = new Set([ownerId]);
   for (const doc of accepted.docs) {
     const data = doc.data();
-    if (!canReceiveFamilyNotifications(data)) continue;
+    if (!canReceiveFamilyNotifications(data, visibilityPermission)) continue;
     if (data.acceptedUserId) {
       targetUserIds.add(data.acceptedUserId);
     }
@@ -123,15 +172,17 @@ async function notificationTargetsForFamily(familyId, actorId) {
   return [...targetUserIds];
 }
 
-function canReceiveFamilyNotifications(invite) {
+function canReceiveFamilyNotifications(invite, visibilityPermission) {
   return Array.isArray(invite.permissions) &&
-    invite.permissions.includes("viewNotifications");
+    invite.permissions.includes("viewNotifications") &&
+    (!visibilityPermission || invite.permissions.includes(visibilityPermission));
 }
 
 async function createAndSendNotification({ familyId, targetUserIds, createdBy, type, title, body, payload }) {
   const cleanTargets = [...new Set((targetUserIds || []).filter(Boolean))];
   if (cleanTargets.length === 0) return;
   const notificationRef = db.collection("notifications").doc();
+  const isReadBy = Object.fromEntries(cleanTargets.map((uid) => [uid, false]));
   const notification = {
     notificationId: notificationRef.id,
     familyId,
@@ -144,11 +195,20 @@ async function createAndSendNotification({ familyId, targetUserIds, createdBy, t
     payload: payload || null,
     readBy: [],
     seenBy: [],
+    isReadBy,
     isDeleted: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   };
-  await notificationRef.set(notification);
+  const batch = db.batch();
+  batch.set(notificationRef, notification);
+  if (familyId) {
+    batch.set(
+      db.collection("families").doc(familyId).collection("notifications").doc(notificationRef.id),
+      notification,
+    );
+  }
+  await batch.commit();
   const tokens = await tokensForUsers(cleanTargets, familyId);
   if (tokens.length === 0) return;
   await messaging.sendEachForMulticast({
@@ -173,6 +233,50 @@ async function createAndSendNotification({ familyId, targetUserIds, createdBy, t
       },
     },
   });
+}
+
+async function familyIdForBaby(babyId) {
+  if (!babyId) return null;
+  const baby = await db.collection("babies").doc(babyId).get();
+  return baby.exists ? baby.get("familyId") : null;
+}
+
+function permissionForRecordType(type) {
+  switch (type) {
+    case "feeding":
+    case "solidFood":
+    case "milkStock":
+    case "water":
+    case "vitamin":
+      return "viewFeeding";
+    case "diaper":
+      return "viewDiaper";
+    case "sleep":
+      return "viewSleep";
+    case "growth":
+      return "viewStats";
+    case "memory":
+      return "viewMemories";
+    case "appointment":
+    case "reminder":
+    case "health":
+      return "viewAppointments";
+    default:
+      return "viewBaby";
+  }
+}
+
+function permissionForReminderCategory(category) {
+  switch (category) {
+    case "vaccine":
+      return "viewVaccines";
+    case "appointment":
+    case "health":
+    case "medicine":
+      return "viewAppointments";
+    default:
+      return "viewNotifications";
+  }
 }
 
 async function tokensForUsers(userIds, familyId) {

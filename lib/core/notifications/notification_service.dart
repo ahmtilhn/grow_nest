@@ -142,12 +142,26 @@ class LocalNotificationService implements NotificationService {
     final plugin = FlutterLocalNotificationsPlugin();
     await plugin.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@drawable/ic_stat_notification'),
+        android: AndroidInitializationSettings(
+          '@drawable/ic_stat_notification',
+        ),
         iOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestBadgePermission: false,
           requestSoundPermission: false,
         ),
+      ),
+    );
+    final android = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'mini_adimlar_soft_chime',
+        'Sakin çan',
+        description: 'MiniAdımlar aile ve hatırlatıcı bildirimleri',
+        importance: Importance.high,
       ),
     );
     return LocalNotificationService._(plugin);

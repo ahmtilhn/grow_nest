@@ -437,18 +437,14 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
       await ref.set(createPayload);
     } catch (error) {
       try {
-        await ref.update(updatePayload);
+        await ref.update({
+          ...updatePayload,
+          'status': 'pending',
+          'acceptedUserId': firestore.FieldValue.delete(),
+          'respondedAt': firestore.FieldValue.delete(),
+        });
       } catch (_) {
-        try {
-          await ref.update({
-            ...updatePayload,
-            'status': 'pending',
-            'acceptedUserId': firestore.FieldValue.delete(),
-            'respondedAt': firestore.FieldValue.delete(),
-          });
-        } catch (_) {
-          Error.throwWithStackTrace(error, StackTrace.current);
-        }
+        Error.throwWithStackTrace(error, StackTrace.current);
       }
     }
   }
@@ -602,10 +598,11 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
       final inviteDocs = data['ownerUserId'] == firebaseUser.uid
           ? (await _familyInvites
                     .where('familyId', isEqualTo: doc.id)
-                    .where('status', isEqualTo: 'accepted')
                     .limit(30)
                     .get())
                 .docs
+                .where((inviteDoc) => inviteDoc.data()['status'] != 'declined')
+                .toList()
           : acceptedInviteDocs
                 .where((inviteDoc) => inviteDoc.data()['familyId'] == doc.id)
                 .toList();
@@ -737,7 +734,11 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
             : query.where('invitedEmail', isEqualTo: email);
       }
       inviteSubscription = query.limit(30).snapshots().listen((snapshot) {
-        inviteDocs = snapshot.docs;
+        inviteDocs = owner
+            ? snapshot.docs
+                  .where((doc) => doc.data()['status'] != 'declined')
+                  .toList()
+            : snapshot.docs;
         emit();
       }, onError: controller.addError);
     }
@@ -837,7 +838,9 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
       roleLabel: data['roleLabel'] as String?,
       permissions: _stringList(data['permissions']),
       acceptedUserId: data['acceptedUserId'] as String?,
+      status: data['status'] as String? ?? 'pending',
       createdAt: _dateFrom(data['createdAt']) ?? DateTime.now(),
+      respondedAt: _dateFrom(data['respondedAt']),
     );
   }
 
@@ -962,6 +965,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
     return _notificationTokens.doc(tokenId).set({
       'id': tokenId,
       'userId': firebaseUser.uid,
+      'uid': firebaseUser.uid,
       'familyId': _blankToNull(familyId),
       'token': token,
       'platform': platform,
@@ -1062,7 +1066,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
   List<String> _stringList(Object? value) {
     if (value is! Iterable) return const [];
     return value
-        .map((item) => item.toString().trim().toLowerCase())
+        .map((item) => item.toString().trim())
         .where((item) => item.isNotEmpty)
         .toList();
   }

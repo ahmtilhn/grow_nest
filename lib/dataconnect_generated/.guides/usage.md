@@ -1,16 +1,16 @@
 # Basic Usage
 
 ```dart
-ExampleConnector.instance.GetMyProfile().execute();
-ExampleConnector.instance.ListMyFamilies().execute();
-ExampleConnector.instance.ListPendingInvitesForMe(listPendingInvitesForMeVariables).execute();
-ExampleConnector.instance.GetMyPregnancy().execute();
-ExampleConnector.instance.ListFamilyRecords(listFamilyRecordsVariables).execute();
 ExampleConnector.instance.UpsertCurrentUser(upsertCurrentUserVariables).execute();
 ExampleConnector.instance.UpsertFamily(upsertFamilyVariables).execute();
 ExampleConnector.instance.AddFamilyPartner(addFamilyPartnerVariables).execute();
 ExampleConnector.instance.AcceptFamilyPartnerInvite(acceptFamilyPartnerInviteVariables).execute();
 ExampleConnector.instance.DeclineFamilyPartnerInvite(declineFamilyPartnerInviteVariables).execute();
+ExampleConnector.instance.UpsertBaby(upsertBabyVariables).execute();
+ExampleConnector.instance.UpsertPregnancy(upsertPregnancyVariables).execute();
+ExampleConnector.instance.UpsertTrackerRecord(upsertTrackerRecordVariables).execute();
+ExampleConnector.instance.GetMyProfile().execute();
+ExampleConnector.instance.ListMyFamilies().execute();
 
 ```
 

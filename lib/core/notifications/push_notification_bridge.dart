@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../app/app_controller.dart';
 import '../../firebase_options.dart';
+import 'notification_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -15,6 +18,9 @@ class PushNotificationBridge {
     : _messaging = messaging ?? FirebaseMessaging.instance;
 
   final FirebaseMessaging _messaging;
+  String? _lastToken;
+  String? _lastSyncedFamilyId;
+  bool? _lastSyncedEnabled;
 
   Future<void> bind(AppController controller) async {
     try {
@@ -25,25 +31,63 @@ class PushNotificationBridge {
     await _trySetForegroundPresentationOptions();
     await _tryRequestPermission();
     FirebaseMessaging.onMessage.listen((message) async {
+      await _showForegroundNotificationOnAndroid(controller, message);
       await controller.refreshRemoteFamilies(force: true);
     });
     final token = await _tryGetToken();
     if (token != null) {
-      await controller.syncNotificationToken(
-        token: token,
-        platform: _platformLabel,
-      );
+      _lastToken = token;
+      await _syncTokenIfNeeded(controller);
     }
+    controller.addListener(() {
+      unawaited(_syncTokenIfNeeded(controller));
+    });
     _messaging.onTokenRefresh.listen(
       (token) async {
-        await controller.syncNotificationToken(
-          token: token,
-          platform: _platformLabel,
-        );
+        _lastToken = token;
+        _lastSyncedFamilyId = null;
+        await _syncTokenIfNeeded(controller);
       },
       onError: (Object error) {
         debugPrint('Push notification token refresh skipped: $error');
       },
+    );
+  }
+
+  Future<void> _syncTokenIfNeeded(AppController controller) async {
+    final token = _lastToken;
+    if (token == null || controller.snapshot.user == null) return;
+    final familyId = controller.snapshot.family?.id;
+    final enabled = controller.snapshot.notificationsEnabled;
+    if (_lastSyncedFamilyId == familyId && _lastSyncedEnabled == enabled) {
+      return;
+    }
+    await controller.syncNotificationToken(
+      token: token,
+      platform: _platformLabel,
+    );
+    _lastSyncedFamilyId = familyId;
+    _lastSyncedEnabled = enabled;
+  }
+
+  Future<void> _showForegroundNotificationOnAndroid(
+    AppController controller,
+    RemoteMessage message,
+  ) async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    final notification = message.notification;
+    final title = notification?.title;
+    final body = notification?.body;
+    if (title == null || body == null) return;
+    await controller.notifications.show(
+      ScheduledNotification(
+        id:
+            message.messageId ??
+            'push-${DateTime.now().microsecondsSinceEpoch}',
+        title: title,
+        body: body,
+        scheduledAt: DateTime.now(),
+      ),
     );
   }
 

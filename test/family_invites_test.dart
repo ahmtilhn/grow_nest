@@ -256,6 +256,72 @@ void main() {
   );
 
   test(
+    'accepted remote permissions keep camelCase names and allow member invites',
+    () async {
+      final database = AppDatabase.inMemory();
+      addTearDown(database.close);
+      final repository = AppRepository(database);
+      await repository.seedContent();
+      final remote = _FakeRemoteSyncService()
+        ..families = [
+          RemoteFamilySummary(
+            id: 'family-shared',
+            ownerUserId: 'sender-uid',
+            activeBabyId: 'baby-shared',
+            createdAt: DateTime(2026, 1, 1),
+            partnerEmails: const ['invitee@example.com'],
+            invites: [
+              RemoteFamilyInvite(
+                familyId: 'family-shared',
+                invitedEmail: 'invitee@example.com',
+                invitedByUserId: 'sender-uid',
+                invitedByName: 'Sender Parent',
+                ownerUserId: 'sender-uid',
+                activeBabyId: 'baby-shared',
+                permissions: const [
+                  'viewBaby',
+                  'viewNotifications',
+                  'inviteUsers',
+                  'manageUserPermissions',
+                  'removeUsers',
+                ],
+                acceptedUserId: 'email-invitee-example-com',
+                status: 'accepted',
+                createdAt: DateTime(2026, 1, 1),
+                respondedAt: DateTime(2026, 1, 2),
+              ),
+            ],
+            babies: [
+              RemoteBabySummary(
+                id: 'baby-shared',
+                familyId: 'family-shared',
+                name: 'Aylin',
+                birthDate: DateTime(2026, 1, 1),
+                createdAt: DateTime(2026, 1, 1),
+              ),
+            ],
+          ),
+        ];
+      final controller = AppController(repository, syncService: remote);
+
+      await controller.loginLocal('invitee@example.com', '123456');
+      await controller.refreshRemoteFamilies(force: true);
+
+      expect(controller.hasPermission(FamilyPermission.inviteUsers), isTrue);
+      remote.calls.clear();
+
+      await controller.addFamilyPartner('new-member@example.com');
+
+      expect(remote.calls, contains('syncUser:invitee@example.com'));
+      expect(remote.calls, isNot(contains('syncFamily:family-shared')));
+      expect(
+        remote.calls,
+        contains('addFamilyPartner:family-shared:new-member@example.com'),
+      );
+    },
+  );
+
+  test(
     'invitee with an existing local family switches to the shared family and writes into shared scope',
     () async {
       final database = AppDatabase.inMemory();
