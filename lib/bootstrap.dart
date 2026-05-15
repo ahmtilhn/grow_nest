@@ -9,11 +9,13 @@ import 'package:timezone/data/latest.dart' as timezone;
 
 import 'app/app.dart';
 import 'app/app_controller.dart';
+import 'core/calendar/calendar_sync_service.dart';
 import 'core/firebase/firebase_auth_gateway.dart';
 import 'core/firebase/email_verification_service.dart';
 import 'core/firebase/firebase_sync_service.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/notifications/push_notification_bridge.dart';
+import 'core/widgets/baby_status_widget_service.dart';
 import 'data/local/app_database.dart';
 import 'data/repositories/app_repository.dart';
 import 'firebase_options.dart';
@@ -27,9 +29,12 @@ const _allowLocalAuthFallback = bool.fromEnvironment(
   'ALLOW_LOCAL_AUTH_FALLBACK',
 );
 
+_AppForegroundRefreshBridge? _foregroundRefreshBridge;
+
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
   timezone.initializeTimeZones();
+  await BabyStatusWidgetService.initialize();
 
   final firebaseBindings = await _initializeFirebaseBindings();
   final authGateway = firebaseBindings.authGateway;
@@ -55,10 +60,16 @@ Future<void> bootstrap() async {
     emailVerificationService: firebaseBindings.emailVerificationService,
     syncService: firebaseBindings.syncService,
     notificationService: notificationService,
+    calendarSyncService: DeviceCalendarSyncService(),
   );
   await controller.load();
   await controller.refreshFamilyInvites(showDeviceNotification: false);
   await controller.refreshRemoteFamilies(showDeviceNotification: false);
+  await BabyStatusWidgetService.syncSnapshot(
+    controller.snapshot,
+    feedingMlOptions: controller.widgetFeedingMlOptions,
+  );
+  _foregroundRefreshBridge = _AppForegroundRefreshBridge(controller);
 
   runApp(
     ProviderScope(
@@ -67,6 +78,7 @@ Future<void> bootstrap() async {
     ),
   );
 
+  unawaited(_foregroundRefreshBridge!.start());
   if (firebaseBindings.syncService.isEnabled) {
     unawaited(_bindPushNotifications(controller));
   }
@@ -136,4 +148,55 @@ class _FirebaseBindings {
   final AuthGateway authGateway;
   final EmailVerificationService emailVerificationService;
   final RemoteSyncService syncService;
+}
+
+class _AppForegroundRefreshBridge with WidgetsBindingObserver {
+  _AppForegroundRefreshBridge(this._controller);
+
+  final AppController _controller;
+  Timer? _minuteTicker;
+  StreamSubscription<Uri?>? _widgetClickSubscription;
+
+  Future<void> start() async {
+    WidgetsBinding.instance.addObserver(this);
+    _startMinuteTicker();
+    _controller.refreshTimeSensitiveViews();
+    _widgetClickSubscription =
+        await BabyStatusWidgetService.bindForegroundActions(_controller);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        _startMinuteTicker();
+        _controller.refreshTimeSensitiveViews();
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _stopMinuteTicker();
+        break;
+    }
+  }
+
+  void _startMinuteTicker() {
+    if (_minuteTicker != null) return;
+    _minuteTicker = Timer.periodic(const Duration(minutes: 1), (_) {
+      _controller.refreshTimeSensitiveViews();
+    });
+  }
+
+  void _stopMinuteTicker() {
+    _minuteTicker?.cancel();
+    _minuteTicker = null;
+  }
+
+  // ignore: unused_element
+  Future<void> dispose() async {
+    WidgetsBinding.instance.removeObserver(this);
+    _stopMinuteTicker();
+    await _widgetClickSubscription?.cancel();
+  }
 }

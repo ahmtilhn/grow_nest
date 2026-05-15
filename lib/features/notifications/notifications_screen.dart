@@ -147,7 +147,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     await controller.markNotificationRead(notification.id);
     if (!mounted) return;
     final route = _routeFor(notification);
-    if (route != null) context.push(route);
+    if (route == null) return;
+    if (_opensInsideHomeShell(route)) {
+      context.go(route);
+    } else {
+      context.push(route);
+    }
   }
 
   String? _routeFor(AppNotification notification) {
@@ -159,6 +164,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
     if (notification.type.contains('record')) return '/tracker';
     return null;
+  }
+
+  bool _opensInsideHomeShell(String route) {
+    return route == '/growth' ||
+        route == '/tracker' ||
+        route == '/vaccines' ||
+        route == '/education' ||
+        route == '/family';
   }
 
   Future<void> _respondToInvite(

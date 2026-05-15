@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="baby_status_widget_description">Son beslenme, bez ve uyku durumunu gösterir.</string>
+    <string name="widget_feeding">Beslenme</string>
+    <string name="widget_diaper">Bez değişimi</string>
+</resources>

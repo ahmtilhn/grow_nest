@@ -1,7 +1,9 @@
 const admin = require("firebase-admin");
+const { setGlobalOptions } = require("firebase-functions/v2");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 
 admin.initializeApp();
+setGlobalOptions({ region: "europe-west4", maxInstances: 2 });
 
 const db = admin.firestore();
 const messaging = admin.messaging();
@@ -24,7 +26,20 @@ exports.notifyOnFamilyInviteCreated = onDocumentCreated("familyInvites/{inviteId
 exports.notifyOnFamilyInviteAccepted = onDocumentUpdated("familyInvites/{inviteId}", async (event) => {
   const before = event.data.before.data();
   const after = event.data.after.data();
-  if (before.status === after.status || after.status !== "accepted") return;
+  if (before.status === after.status) return;
+  if (after.status === "declined" && before.status === "pending") {
+    await createAndSendNotification({
+      familyId: after.familyId,
+      targetUserIds: [after.familyOwnerUserId || after.invitedByUserId].filter(Boolean),
+      createdBy: after.acceptedUserId,
+      type: "family_invite_declined",
+      title: "Davet reddedildi",
+      body: `${after.invitedDisplayName || after.invitedEmail} aile davetini reddetti.`,
+      payload: event.params.inviteId,
+    });
+    return;
+  }
+  if (after.status !== "accepted") return;
   await createAndSendNotification({
     familyId: after.familyId,
     targetUserIds: [after.familyOwnerUserId || after.invitedByUserId].filter(Boolean),
@@ -153,29 +168,50 @@ async function notifyFamily({ familyId, actorId, visibilityPermission, type, tit
 async function notificationTargetsForFamily(familyId, actorId, visibilityPermission) {
   const family = await db.collection("families").doc(familyId).get();
   if (!family.exists) return [];
-  const ownerId = family.get("ownerUserId");
+  const familyData = family.data() || {};
+  const ownerId = familyData.ownerUserId;
   const accepted = await db.collection("familyInvites")
     .where("familyId", "==", familyId)
     .where("status", "==", "accepted")
     .get();
-  const targetUserIds = new Set([ownerId]);
+  const targetUserIds = new Set();
+  if (ownerId) targetUserIds.add(ownerId);
+  const eligibleAcceptedEmails = new Set();
+  let eligibleAcceptedCount = 0;
   for (const doc of accepted.docs) {
     const data = doc.data();
     if (!canReceiveFamilyNotifications(data, visibilityPermission)) continue;
+    eligibleAcceptedCount += 1;
     if (data.acceptedUserId) {
       targetUserIds.add(data.acceptedUserId);
     }
-    const currentUsers = await usersByEmail(data.invitedEmail);
+    const invitedEmail = normalizeEmail(data.invitedEmail);
+    if (invitedEmail) eligibleAcceptedEmails.add(invitedEmail);
+    const currentUsers = await usersByEmail(invitedEmail);
     currentUsers.forEach((user) => targetUserIds.add(user.id));
+  }
+  const canUsePartnerUidFallback = accepted.docs.length > 0 && eligibleAcceptedCount === accepted.docs.length;
+  const partnerUserIds = Array.isArray(familyData.partnerUserIds) ? familyData.partnerUserIds : [];
+  for (const partner of partnerUserIds) {
+    const partnerKey = String(partner || "").trim();
+    if (!partnerKey) continue;
+    if (partnerKey.includes("@")) {
+      const partnerEmail = normalizeEmail(partnerKey);
+      if (!eligibleAcceptedEmails.has(partnerEmail)) continue;
+      const currentUsers = await usersByEmail(partnerEmail);
+      currentUsers.forEach((user) => targetUserIds.add(user.id));
+    } else if (canUsePartnerUidFallback) {
+      targetUserIds.add(partnerKey);
+    }
   }
   if (actorId) targetUserIds.delete(actorId);
   return [...targetUserIds];
 }
 
 function canReceiveFamilyNotifications(invite, visibilityPermission) {
-  return Array.isArray(invite.permissions) &&
-    invite.permissions.includes("viewNotifications") &&
-    (!visibilityPermission || invite.permissions.includes(visibilityPermission));
+  const permissions = Array.isArray(invite.permissions) ? invite.permissions : [];
+  if (visibilityPermission) return permissions.includes(visibilityPermission);
+  return permissions.includes("viewNotifications");
 }
 
 async function createAndSendNotification({ familyId, targetUserIds, createdBy, type, title, body, payload }) {
@@ -202,37 +238,70 @@ async function createAndSendNotification({ familyId, targetUserIds, createdBy, t
   };
   const batch = db.batch();
   batch.set(notificationRef, notification);
-  if (familyId) {
-    batch.set(
-      db.collection("families").doc(familyId).collection("notifications").doc(notificationRef.id),
-      notification,
-    );
-  }
   await batch.commit();
-  const tokens = await tokensForUsers(cleanTargets, familyId);
-  if (tokens.length === 0) return;
-  await messaging.sendEachForMulticast({
-    tokens,
-    notification: { title, body },
-    data: {
-      notificationId: notificationRef.id,
-      familyId: familyId || "",
-      type,
-      payload: payload || "",
-    },
-    android: {
-      priority: "high",
-      notification: { channelId: "mini_adimlar_soft_chime" },
-    },
-    apns: {
-      payload: {
-        aps: {
-          sound: "default",
-          badge: 1,
+  const tokenEntries = await tokensForUsers(cleanTargets);
+  if (tokenEntries.length === 0) {
+    console.log(`No FCM tokens for notification ${notificationRef.id} (${type}).`);
+    return;
+  }
+  const data = {
+    notificationId: notificationRef.id,
+    familyId: familyId || "",
+    category: "family",
+    type,
+    payload: payload || "",
+  };
+  const alertTokens = tokenEntries
+    .filter((entry) => entry.enabled)
+    .map((entry) => entry.token);
+  const syncTokens = shouldSendWidgetSync(type)
+    ? tokenEntries.map((entry) => entry.token)
+    : [];
+  if (alertTokens.length > 0) {
+    await sendFcmAndLog({
+      tokens: alertTokens,
+      notification: { title, body },
+      data,
+      android: {
+        priority: "high",
+        notification: { channelId: "mini_adimlar_soft_chime" },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1,
+            contentAvailable: true,
+          },
         },
       },
-    },
-  });
+    }, notificationRef.id, type);
+  }
+  if (syncTokens.length > 0) {
+    await sendFcmAndLog({
+      tokens: syncTokens,
+      data: {
+        ...data,
+        syncOnly: "true",
+      },
+      android: {
+        priority: "high",
+        collapseKey: familyId ? `family-${familyId}-widget-sync` : "family-widget-sync",
+      },
+      apns: {
+        headers: {
+          "apns-priority": "5",
+          "apns-push-type": "background",
+          "apns-collapse-id": familyId ? `family-${familyId}-widget-sync` : "family-widget-sync",
+        },
+        payload: {
+          aps: {
+            contentAvailable: true,
+          },
+        },
+      },
+    }, notificationRef.id, `${type}:sync`);
+  }
 }
 
 async function familyIdForBaby(babyId) {
@@ -266,10 +335,26 @@ function permissionForRecordType(type) {
   }
 }
 
+function shouldSendWidgetSync(type) {
+  return [
+    "family_record",
+    "family_record_update",
+    "family_record_deleted",
+  ].includes(type);
+}
+
 function permissionForReminderCategory(category) {
   switch (category) {
     case "vaccine":
       return "viewVaccines";
+    case "feeding":
+    case "water":
+    case "vitamin":
+      return "viewFeeding";
+    case "sleep":
+      return "viewSleep";
+    case "diaper":
+      return "viewDiaper";
     case "appointment":
     case "health":
     case "medicine":
@@ -279,25 +364,26 @@ function permissionForReminderCategory(category) {
   }
 }
 
-async function tokensForUsers(userIds, familyId) {
-  const tokens = new Set();
+async function tokensForUsers(userIds) {
+  const tokens = new Map();
   for (const chunk of chunks(userIds, 30)) {
     const snapshot = await db.collection("notificationTokens")
       .where("userId", "in", chunk)
-      .where("enabled", "==", true)
       .get();
     snapshot.forEach((doc) => {
       const data = doc.data();
-      if (data.familyId && familyId && data.familyId !== familyId) return;
-      if (data.token) tokens.add(data.token);
+      if (!data.token) return;
+      const enabled = data.enabled !== false;
+      tokens.set(data.token, (tokens.get(data.token) || false) || enabled);
     });
   }
-  return [...tokens];
+  return [...tokens.entries()].map(([token, enabled]) => ({ token, enabled }));
 }
 
 async function usersByEmail(email) {
   if (!email) return [];
-  const normalized = String(email).trim().toLowerCase();
+  const normalized = normalizeEmail(email);
+  if (!normalized) return [];
   const snapshot = await db.collection("users")
     .where("email", "==", normalized)
     .limit(5)
@@ -311,6 +397,22 @@ async function usersByEmail(email) {
     if (error && error.code === "auth/user-not-found") return [];
     throw error;
   }
+}
+
+async function sendFcmAndLog(message, notificationId, type) {
+  const response = await messaging.sendEachForMulticast(message);
+  if (response.failureCount === 0) return;
+  const failedCodes = response.responses
+    .filter((item) => !item.success)
+    .map((item) => item.error && item.error.code)
+    .filter(Boolean);
+  console.warn(
+    `FCM notification ${notificationId} (${type}) sent with ${response.failureCount} failures: ${failedCodes.join(", ")}`,
+  );
+}
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
 }
 
 function chunks(items, size) {

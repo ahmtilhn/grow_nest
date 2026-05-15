@@ -18,6 +18,14 @@
       ]
     },
     {
+      "collectionGroup": "trackerRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "familyId", "order": "ASCENDING" },
+        { "fieldPath": "occurredAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "familyInvites",
       "queryScope": "COLLECTION",
       "fields": [

@@ -134,16 +134,7 @@ service cloud.firestore {
 
     function validPermissionList(value) {
       return value is list &&
-        value.size() <= 25 &&
-        value.hasOnly([
-          'viewBaby', 'viewFeeding', 'viewDiaper', 'viewSleep',
-          'viewVaccines', 'viewAppointments', 'viewMemories',
-          'viewNotifications', 'viewStats', 'addFeeding', 'addDiaper',
-          'manageSleep', 'addGrowth', 'addVaccine', 'addAppointment',
-          'addMemory', 'saveArticle', 'editRecords', 'deleteRecords',
-          'inviteUsers', 'manageUserPermissions', 'removeUsers',
-          'editFamily', 'editBaby', 'deleteFamilyData'
-        ]);
+        value.size() <= 25;
     }
 
     function inviteId(familyId, email) {
@@ -166,27 +157,57 @@ service cloud.firestore {
       return /databases/$(database)/documents/babies/$(babyId);
     }
 
-    function acceptedInviteExists(familyId) {
+    function acceptedInviteMatchesCurrentUser(familyId) {
+      let invite = get(familyInvitePath(familyId, authEmail()));
       return authEmail() != '' &&
-        exists(familyInvitePath(familyId, authEmail())) &&
-        get(familyInvitePath(familyId, authEmail())).data.status == 'accepted' &&
+        invite.data.status == 'accepted' &&
         (
-          get(familyInvitePath(familyId, authEmail())).data.acceptedUserId == request.auth.uid ||
+          invite.data.acceptedUserId == request.auth.uid ||
           (
             authEmailVerified() &&
-            get(familyInvitePath(familyId, authEmail())).data.invitedEmail == authEmail()
+            invite.data.invitedEmail == authEmail()
           )
         );
     }
 
-    function acceptedInviteData(familyId) {
-      return get(familyInvitePath(familyId, authEmail())).data;
+    function acceptedInviteHasPermission(familyId, permission) {
+      let invite = get(familyInvitePath(familyId, authEmail()));
+      return authEmail() != '' &&
+        invite.data.status == 'accepted' &&
+        (
+          invite.data.acceptedUserId == request.auth.uid ||
+          (
+            authEmailVerified() &&
+            invite.data.invitedEmail == authEmail()
+          )
+        ) &&
+        invite.data.permissions is list &&
+        invite.data.permissions.hasAny([permission]);
+    }
+
+    function acceptedInviteExists(familyId) {
+      return acceptedInviteMatchesCurrentUser(familyId);
+    }
+
+    function inviteBelongsToCurrentUser(data) {
+      return data.acceptedUserId == request.auth.uid ||
+        (
+          authEmailVerified() &&
+          data.invitedEmail == authEmail()
+        );
     }
 
     function canReadFamily(familyId) {
       return signedIn() &&
         exists(familyPath(familyId)) &&
         (get(familyPath(familyId)).data.ownerUserId == request.auth.uid ||
+          (
+            get(familyPath(familyId)).data.partnerUserIds is list &&
+            get(familyPath(familyId)).data.partnerUserIds.hasAny([
+              request.auth.uid,
+              authEmail()
+            ])
+          ) ||
           acceptedInviteExists(familyId));
     }
 
@@ -198,10 +219,14 @@ service cloud.firestore {
 
     function canUsePermission(familyId, permission) {
       return isFamilyOwner(familyId) ||
+        acceptedInviteHasPermission(familyId, permission);
+    }
+
+    function canUpdateInvitePermissions(data) {
+      return isFamilyOwner(data.familyId) ||
         (
-          acceptedInviteExists(familyId) &&
-          acceptedInviteData(familyId).permissions is list &&
-          acceptedInviteData(familyId).permissions.hasAny([permission])
+          acceptedInviteHasPermission(data.familyId, 'manageUserPermissions') &&
+          !inviteBelongsToCurrentUser(data)
         );
     }
 
@@ -221,13 +246,30 @@ service cloud.firestore {
     }
 
     function canCreateRecordType(familyId, type) {
-      return (type == 'feeding' && canUsePermission(familyId, 'addFeeding')) ||
+      return (
+          type in ['feeding', 'solidFood', 'milkStock', 'water', 'vitamin'] &&
+          canUsePermission(familyId, 'addFeeding')
+        ) ||
         (type == 'diaper' && canUsePermission(familyId, 'addDiaper')) ||
         (type == 'sleep' && canUsePermission(familyId, 'manageSleep')) ||
         (type == 'growth' && canUsePermission(familyId, 'addGrowth')) ||
-        (type == 'appointment' && canUsePermission(familyId, 'addAppointment')) ||
+        (
+          type in ['appointment', 'reminder', 'health'] &&
+          canUsePermission(familyId, 'addAppointment')
+        ) ||
         (type == 'memory' && canUsePermission(familyId, 'addMemory')) ||
         canUsePermission(familyId, 'editRecords');
+    }
+
+    function canCreateReminderCategory(familyId, category) {
+      return (
+          category == 'vaccine' &&
+          canUsePermission(familyId, 'addVaccine')
+        ) ||
+        (
+          category != 'vaccine' &&
+          canUsePermission(familyId, 'addAppointment')
+        );
     }
 
     function canReadBaby(babyId) {
@@ -272,6 +314,67 @@ service cloud.firestore {
         validOptionalString(data, 'activeBabyId', 120) &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
+    }
+
+    function familyIdentityUnchanged(familyId) {
+      return request.resource.data.id == resource.data.id &&
+        request.resource.data.id == familyId &&
+        request.resource.data.ownerUserId == resource.data.ownerUserId &&
+        request.resource.data.activeBabyId == resource.data.activeBabyId &&
+        request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function validFamilyPartnerJoin(familyId) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'partnerUserIds', 'updatedAt'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'ownerUserId', 'partnerUserIds', 'activeBabyId',
+          'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.id == familyId &&
+        validStringList(request.resource.data.partnerUserIds, 10) &&
+        validOptionalString(request.resource.data, 'activeBabyId', 120) &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        familyIdentityUnchanged(familyId) &&
+        resource.data.partnerUserIds.toSet()
+          .difference(request.resource.data.partnerUserIds.toSet())
+          .size() == 0 &&
+        request.resource.data.partnerUserIds.toSet()
+          .difference(resource.data.partnerUserIds.toSet())
+          .hasOnly([authEmail(), request.auth.uid]) &&
+        request.resource.data.partnerUserIds.toSet()
+          .difference(resource.data.partnerUserIds.toSet())
+          .hasAny([authEmail(), request.auth.uid]) &&
+        authEmail() != '' &&
+        exists(familyInvitePath(familyId, authEmail())) &&
+        getAfter(familyInvitePath(familyId, authEmail())).data.status == 'accepted' &&
+        getAfter(familyInvitePath(familyId, authEmail())).data.acceptedUserId == request.auth.uid &&
+        request.resource.data.partnerUserIds.hasAll([authEmail(), request.auth.uid]);
+    }
+
+    function validFamilyPartnerRemoval(familyId) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'partnerUserIds', 'updatedAt'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'ownerUserId', 'partnerUserIds', 'activeBabyId',
+          'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.id == familyId &&
+        validStringList(request.resource.data.partnerUserIds, 10) &&
+        validOptionalString(request.resource.data, 'activeBabyId', 120) &&
+        request.resource.data.createdAt is timestamp &&
+        request.resource.data.updatedAt is timestamp &&
+        familyIdentityUnchanged(familyId) &&
+        request.resource.data.partnerUserIds.toSet()
+          .difference(resource.data.partnerUserIds.toSet())
+          .size() == 0 &&
+        resource.data.partnerUserIds.toSet()
+          .difference(request.resource.data.partnerUserIds.toSet())
+          .size() > 0 &&
+        canUsePermission(familyId, 'removeUsers');
     }
 
     function validBaby(data, babyId) {
@@ -426,37 +529,48 @@ service cloud.firestore {
     }
 
     function validInvitePermissionUpdate(inviteDocId) {
-      return validInvite(request.resource.data, inviteDocId) &&
-        inviteIdentityUnchanged(inviteDocId) &&
-        canUsePermission(resource.data.familyId, 'manageUserPermissions') &&
-        request.resource.data.status == resource.data.status &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'invitedByName', 'invitedDisplayName', 'roleLabel', 'permissions',
           'updatedAt'
-        ]);
+        ]) &&
+        request.resource.data.status == resource.data.status &&
+        validInvite(request.resource.data, inviteDocId) &&
+        inviteIdentityUnchanged(inviteDocId) &&
+        canUpdateInvitePermissions(resource.data);
     }
 
     function validInviteResend(inviteDocId) {
-      return validInvite(request.resource.data, inviteDocId) &&
-        inviteIdentityUnchanged(inviteDocId) &&
-        canManageInviteForFamily(resource.data.familyId) &&
-        resource.data.status in ['pending', 'declined'] &&
-        request.resource.data.status == 'pending' &&
-        !hasField(request.resource.data, 'acceptedUserId') &&
-        !hasField(request.resource.data, 'respondedAt') &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'invitedByName', 'invitedDisplayName', 'roleLabel', 'permissions',
           'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
-        ]);
+        ]) &&
+        request.resource.data.status == 'pending' &&
+        request.resource.data.keys().hasOnly([
+          'id', 'familyId', 'invitedEmail', 'invitedByUserId',
+          'invitedByName', 'invitedDisplayName', 'roleLabel', 'permissions',
+          'familyOwnerUserId', 'status', 'acceptedUserId', 'createdAt',
+          'updatedAt', 'respondedAt'
+        ]) &&
+        inviteIdentityUnchanged(inviteDocId) &&
+        resource.data.status in ['pending', 'declined'] &&
+        canManageInviteForFamily(resource.data.familyId) &&
+        validString(request.resource.data, 'invitedByName', 1, 80) &&
+        validOptionalString(request.resource.data, 'invitedDisplayName', 80) &&
+        validOptionalString(request.resource.data, 'roleLabel', 80) &&
+        (!hasField(request.resource.data, 'permissions') ||
+          validPermissionList(request.resource.data.permissions)) &&
+        !hasField(request.resource.data, 'acceptedUserId') &&
+        !hasField(request.resource.data, 'respondedAt') &&
+        request.resource.data.updatedAt is timestamp;
     }
 
     function validInviteResponse(inviteDocId) {
-      return resource.data.id == inviteDocId &&
-        request.auth.token.email == resource.data.invitedEmail &&
-        resource.data.status == 'pending' &&
-        request.writeFields.hasOnly([
+      return request.writeFields.hasOnly([
           'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
         ]) &&
+        resource.data.id == inviteDocId &&
+        request.auth.token.email == resource.data.invitedEmail &&
+        resource.data.status == 'pending' &&
         request.resource.data.updatedAt is timestamp &&
         (
           (request.resource.data.status == 'accepted' &&
@@ -469,28 +583,29 @@ service cloud.firestore {
     }
 
     function validAcceptedInviteRelink(inviteDocId) {
-      return validInvite(request.resource.data, inviteDocId) &&
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'acceptedUserId', 'updatedAt'
+        ]) &&
+        request.resource.data.status == 'accepted' &&
+        request.resource.data.acceptedUserId == request.auth.uid &&
+        validInvite(request.resource.data, inviteDocId) &&
         inviteIdentityUnchanged(inviteDocId) &&
         authEmailVerified() &&
         resource.data.invitedEmail == authEmail() &&
         resource.data.status == 'accepted' &&
-        request.resource.data.status == 'accepted' &&
-        request.resource.data.acceptedUserId == request.auth.uid &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'acceptedUserId', 'updatedAt'
-        ]);
+        request.resource.data.acceptedUserId == request.auth.uid;
     }
 
     function validInviteRemoval(inviteDocId) {
-      return validInvite(request.resource.data, inviteDocId) &&
-        inviteIdentityUnchanged(inviteDocId) &&
-        canUsePermission(resource.data.familyId, 'removeUsers') &&
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
+        ]) &&
         request.resource.data.status == 'declined' &&
         !hasField(request.resource.data, 'acceptedUserId') &&
         request.resource.data.respondedAt is timestamp &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
-        ]);
+        validInvite(request.resource.data, inviteDocId) &&
+        inviteIdentityUnchanged(inviteDocId) &&
+        canUsePermission(resource.data.familyId, 'removeUsers');
     }
 
     function validNotification(data, notificationId) {
@@ -551,13 +666,27 @@ service cloud.firestore {
     match /families/{familyId} {
       allow read: if signedIn() &&
         (resource.data.ownerUserId == request.auth.uid ||
+          (
+            resource.data.partnerUserIds is list &&
+            resource.data.partnerUserIds.hasAny([request.auth.uid, authEmail()])
+          ) ||
           acceptedInviteExists(familyId));
-      allow create, update: if signedIn() &&
+      allow create: if signedIn() &&
         validFamily(request.resource.data, familyId) &&
-        (!exists(familyPath(familyId)) ||
-          (isFamilyOwner(familyId) &&
+        !exists(familyPath(familyId));
+      allow update: if signedIn() &&
+        (
+          (
+            validFamilyPartnerJoin(familyId) ||
+            validFamilyPartnerRemoval(familyId)
+          ) ||
+          (
+            validFamily(request.resource.data, familyId) &&
+            isFamilyOwner(familyId) &&
             request.resource.data.ownerUserId == resource.data.ownerUserId &&
-            request.resource.data.createdAt == resource.data.createdAt));
+            request.resource.data.createdAt == resource.data.createdAt
+          )
+        );
       allow delete: if false;
     }
 
@@ -614,7 +743,12 @@ service cloud.firestore {
                 request.resource.data.deletedAt is timestamp &&
                 canUsePermission(resource.data.familyId, 'deleteRecords')
               ) ||
-              canUsePermission(resource.data.familyId, 'editRecords')
+              canUsePermission(resource.data.familyId, 'editRecords') ||
+              (
+                resource.data.type == 'sleep' &&
+                request.resource.data.type == 'sleep' &&
+                canUsePermission(resource.data.familyId, 'manageSleep')
+              )
             ))
         );
       allow delete: if false;
@@ -632,7 +766,10 @@ service cloud.firestore {
           ) ||
           (
             !(request.resource.data.deletedAt is timestamp) &&
-            canUsePermission(request.resource.data.familyId, 'addAppointment')
+            canCreateReminderCategory(
+              request.resource.data.familyId,
+              request.resource.data.category
+            )
           )
         ) &&
         (!exists(/databases/$(database)/documents/reminders/$(reminderId)) ||
@@ -672,11 +809,11 @@ service cloud.firestore {
         validNewInvite(request.resource.data, inviteDocId);
       allow update: if signedIn() &&
         (
-          validInviteResponse(inviteDocId) ||
-          validAcceptedInviteRelink(inviteDocId) ||
           validInvitePermissionUpdate(inviteDocId) ||
+          validInviteResponse(inviteDocId) ||
+          validInviteRemoval(inviteDocId) ||
           validInviteResend(inviteDocId) ||
-          validInviteRemoval(inviteDocId)
+          validAcceptedInviteRelink(inviteDocId)
         );
       allow delete: if false;
     }

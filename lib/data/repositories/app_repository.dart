@@ -792,6 +792,106 @@ class AppRepository {
     await setUserSetting(userId, 'notificationSound', sound);
   }
 
+  Future<bool> lockScreenSummaryEnabled() async {
+    final userId = await _currentUserIdOrNull();
+    if (userId == null) return false;
+    return await _settingForUserAsync(userId, 'lockScreenSummaryEnabled') ==
+        'true';
+  }
+
+  Future<void> setLockScreenSummaryEnabled(bool enabled) async {
+    final userId = await _currentUserId();
+    await setUserSetting(userId, 'lockScreenSummaryEnabled', '$enabled');
+  }
+
+  Future<List<int>> widgetFeedingMlOptions() async {
+    final userId = await _currentUserIdOrNull();
+    if (userId == null) return const [60, 90, 120];
+    final stored = await _settingForUserAsync(userId, 'widgetFeedingMlOptions');
+    return _decodeWidgetFeedingMlOptions(stored);
+  }
+
+  Future<void> setWidgetFeedingMlOptions(List<int> options) async {
+    final userId = await _currentUserId();
+    final normalized = _normalizeWidgetFeedingMlOptions(options);
+    await setUserSetting(
+      userId,
+      'widgetFeedingMlOptions',
+      normalized.join(','),
+    );
+  }
+
+  Future<bool> deviceCalendarSyncEnabled() async {
+    final userId = await _currentUserIdOrNull();
+    if (userId == null) return false;
+    final enabled = await _settingForUserAsync(
+      userId,
+      'deviceCalendarSyncEnabled',
+    );
+    if (enabled == 'true') return true;
+    return await _settingForUserAsync(userId, 'googleCalendarSyncEnabled') ==
+        'true';
+  }
+
+  Future<void> setDeviceCalendarSyncEnabled(bool enabled) async {
+    final userId = await _currentUserId();
+    await setUserSetting(userId, 'deviceCalendarSyncEnabled', '$enabled');
+  }
+
+  Future<Map<String, List<String>>> calendarReminderEventIds() async {
+    final userId = await _currentUserIdOrNull();
+    if (userId == null) return const {};
+    final stored = await _settingForUserAsync(
+      userId,
+      'deviceCalendarReminderEventIds',
+    );
+    final legacyStored = await _settingForUserAsync(
+      userId,
+      'googleCalendarReminderEventIds',
+    );
+    return {
+      ..._decodeCalendarReminderEventIds(legacyStored),
+      ..._decodeCalendarReminderEventIds(stored),
+    };
+  }
+
+  Future<List<String>> calendarEventIdsForReminder(String reminderId) async {
+    final mapping = await calendarReminderEventIds();
+    return mapping[reminderId] ?? const [];
+  }
+
+  Future<void> setCalendarEventIdsForReminder(
+    String reminderId,
+    List<String> eventIds,
+  ) async {
+    final userId = await _currentUserId();
+    final mapping = await calendarReminderEventIds();
+    final normalized = eventIds
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    if (normalized.isEmpty) {
+      mapping.remove(reminderId);
+    } else {
+      mapping[reminderId] = normalized;
+    }
+    await setUserSetting(
+      userId,
+      'deviceCalendarReminderEventIds',
+      _encodeCalendarReminderEventIds(mapping),
+    );
+  }
+
+  Future<void> removeCalendarEventIdsForReminder(String reminderId) {
+    return setCalendarEventIdsForReminder(reminderId, const []);
+  }
+
+  Future<void> clearCalendarReminderEventIds() async {
+    final userId = await _currentUserId();
+    await setUserSetting(userId, 'deviceCalendarReminderEventIds', '{}');
+  }
+
   Future<void> setSetting(String key, String value) {
     return _db
         .into(_db.settingsRows)
@@ -806,6 +906,68 @@ class AppRepository {
 
   Future<void> setActiveFamilyForUser(String userId, String familyId) {
     return setUserSetting(userId, 'activeFamilyId', familyId);
+  }
+
+  List<int> _decodeWidgetFeedingMlOptions(String? value) {
+    if (value == null || value.trim().isEmpty) return const [60, 90, 120];
+    final parsed = value
+        .split(',')
+        .map((item) => int.tryParse(item.trim()))
+        .whereType<int>()
+        .toList();
+    return _normalizeWidgetFeedingMlOptions(parsed);
+  }
+
+  List<int> _normalizeWidgetFeedingMlOptions(List<int> options) {
+    final normalized = <int>[];
+    for (final option in options) {
+      final value = option.clamp(10, 300).toInt();
+      if (!normalized.contains(value)) normalized.add(value);
+      if (normalized.length == 3) break;
+    }
+    const defaults = [60, 90, 120];
+    for (final option in defaults) {
+      if (!normalized.contains(option)) normalized.add(option);
+      if (normalized.length == 3) break;
+    }
+    return List<int>.unmodifiable(normalized.take(3));
+  }
+
+  Map<String, List<String>> _decodeCalendarReminderEventIds(String? value) {
+    if (value == null || value.trim().isEmpty) return {};
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is! Map) return {};
+      final mapping = <String, List<String>>{};
+      decoded.forEach((key, rawIds) {
+        final reminderId = key.toString().trim();
+        if (reminderId.isEmpty || rawIds is! List) return;
+        final ids = rawIds
+            .map((id) => id.toString().trim())
+            .where((id) => id.isNotEmpty)
+            .toSet()
+            .toList();
+        if (ids.isNotEmpty) mapping[reminderId] = ids;
+      });
+      return mapping;
+    } catch (_) {
+      return {};
+    }
+  }
+
+  String _encodeCalendarReminderEventIds(Map<String, List<String>> mapping) {
+    final normalized = <String, List<String>>{};
+    for (final entry in mapping.entries) {
+      final reminderId = entry.key.trim();
+      if (reminderId.isEmpty) continue;
+      final ids = entry.value
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+      if (ids.isNotEmpty) normalized[reminderId] = ids;
+    }
+    return jsonEncode(normalized);
   }
 
   Future<void> completePregnancyOnboarding({
@@ -937,22 +1099,41 @@ class AppRepository {
     final invitedUser = await (_db.select(
       _db.users,
     )..where((tbl) => tbl.email.equals(normalized))).getSingleOrNull();
-    await _db
-        .into(_db.familyInvites)
-        .insertOnConflictUpdate(
-          FamilyInvitesCompanion.insert(
-            id: inviteId,
-            familyId: family.id,
-            invitedEmail: normalized,
-            invitedByUserId: userId,
-            invitedByName: currentUser?.name ?? 'MiniAdımlar',
-            invitedDisplayName: Value(effectiveDisplayName),
-            roleLabel: Value(effectiveRole),
-            permissionsJson: Value(_encodePermissions(effectivePermissions)),
-            status: Value(FamilyInviteStatus.pending.name),
-            createdAt: now,
-          ),
-        );
+    final existingInvite = await (_db.select(
+      _db.familyInvites,
+    )..where((tbl) => tbl.id.equals(inviteId))).getSingleOrNull();
+    if (existingInvite == null) {
+      await _db
+          .into(_db.familyInvites)
+          .insert(
+            FamilyInvitesCompanion.insert(
+              id: inviteId,
+              familyId: family.id,
+              invitedEmail: normalized,
+              invitedByUserId: userId,
+              invitedByName: currentUser?.name ?? 'MiniAdımlar',
+              invitedDisplayName: Value(effectiveDisplayName),
+              roleLabel: Value(effectiveRole),
+              permissionsJson: Value(_encodePermissions(effectivePermissions)),
+              status: Value(FamilyInviteStatus.pending.name),
+              createdAt: now,
+            ),
+          );
+    } else {
+      await (_db.update(
+        _db.familyInvites,
+      )..where((tbl) => tbl.id.equals(inviteId))).write(
+        FamilyInvitesCompanion(
+          invitedByName: Value(currentUser?.name ?? 'MiniAdımlar'),
+          invitedDisplayName: Value(effectiveDisplayName),
+          roleLabel: Value(effectiveRole),
+          permissionsJson: Value(_encodePermissions(effectivePermissions)),
+          acceptedUserId: const Value<String?>(null),
+          status: Value(FamilyInviteStatus.pending.name),
+          respondedAt: const Value<DateTime?>(null),
+        ),
+      );
+    }
     if (invitedUser != null) {
       await _createNotification(
         type: 'family_invite',
@@ -1348,6 +1529,51 @@ class AppRepository {
         );
   }
 
+  Future<List<domain.TrackerRecord>> pendingTrackerRecords() async {
+    final rows =
+        await (_db.select(_db.trackerRecords)
+              ..where(
+                (tbl) =>
+                    tbl.syncStatus.equals(SyncStatus.pending.name) &
+                    tbl.deletedAt.isNull(),
+              )
+              ..orderBy([(tbl) => OrderingTerm.asc(tbl.updatedAt)])
+              ..limit(50))
+            .get();
+    return rows
+        .map(
+          (row) => domain.TrackerRecord(
+            id: row.id,
+            type: _safeRecordType(row.type),
+            title: row.title,
+            familyId: row.familyId,
+            babyId: row.babyId,
+            value: row.value,
+            note: row.note,
+            createdByUserId: row.createdByUserId,
+            createdByName: row.createdByName,
+            updatedByUserId: row.updatedByUserId,
+            updatedByName: row.updatedByName,
+            occurredAt: row.occurredAt,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            syncStatus: SyncStatus.pending,
+          ),
+        )
+        .toList();
+  }
+
+  Future<void> markTrackerRecordSynced(String recordId) async {
+    await (_db.update(
+      _db.trackerRecords,
+    )..where((tbl) => tbl.id.equals(recordId))).write(
+      TrackerRecordsCompanion(syncStatus: Value(SyncStatus.synced.name)),
+    );
+    await (_db.update(_db.syncQueueItems)
+          ..where((tbl) => tbl.id.equals('sync-$recordId')))
+        .write(const SyncQueueItemsCompanion(status: Value('synced')));
+  }
+
   Future<void> deleteRecord(String recordId) async {
     final record = await (_db.select(
       _db.trackerRecords,
@@ -1601,10 +1827,27 @@ class AppRepository {
   ) async {
     final currentUserId = await _currentUserIdOrNull();
     final createdNotifications = <domain.AppNotification>[];
-    final partnerIds = family.partnerEmails
+    final remotePartnerIds = family.partnerEmails
         .map((email) => email.trim().toLowerCase())
         .where((email) => email.isNotEmpty)
         .toSet()
+        .toList();
+    final declinedInvites =
+        await (_db.select(_db.familyInvites)..where(
+              (tbl) =>
+                  tbl.familyId.equals(family.id) &
+                  tbl.status.equals(FamilyInviteStatus.declined.name),
+            ))
+            .get();
+    final blockedPartnerIds = <String>{
+      for (final invite in declinedInvites)
+        invite.invitedEmail.trim().toLowerCase(),
+      for (final invite in declinedInvites)
+        if (invite.acceptedUserId?.trim().isNotEmpty == true)
+          invite.acceptedUserId!.trim().toLowerCase(),
+    };
+    final partnerIds = remotePartnerIds
+        .where((partner) => !blockedPartnerIds.contains(partner))
         .toList();
     final activeBabyId =
         family.activeBabyId ??
@@ -1850,7 +2093,8 @@ class AppRepository {
                 respondedAt: Value(DateTime.now()),
               ),
             );
-      } else if (existing.status != FamilyInviteStatus.accepted.name) {
+      } else if (existing.status != FamilyInviteStatus.accepted.name &&
+          existing.status != FamilyInviteStatus.declined.name) {
         await (_db.update(
           _db.familyInvites,
         )..where((tbl) => tbl.id.equals(inviteId))).write(
@@ -1859,6 +2103,83 @@ class AppRepository {
             respondedAt: Value(DateTime.now()),
           ),
         );
+      }
+    }
+    return createdNotifications;
+  }
+
+  Future<List<domain.AppNotification>> upsertRemoteTrackerRecords({
+    required String familyId,
+    required List<RemoteTrackerRecordSummary> records,
+  }) async {
+    final currentUserId = await _currentUserIdOrNull();
+    final createdNotifications = <domain.AppNotification>[];
+    for (final record in records) {
+      final existingRecord = await (_db.select(
+        _db.trackerRecords,
+      )..where((tbl) => tbl.id.equals(record.id))).getSingleOrNull();
+      if (record.deletedAt != null) {
+        if (existingRecord != null) {
+          await (_db.update(
+            _db.trackerRecords,
+          )..where((tbl) => tbl.id.equals(record.id))).write(
+            TrackerRecordsCompanion(
+              deletedAt: Value(record.deletedAt),
+              updatedAt: Value(record.updatedAt),
+              syncStatus: Value(SyncStatus.synced.name),
+            ),
+          );
+          if (existingRecord.type == RecordType.growth.name &&
+              existingRecord.babyId != null) {
+            await _refreshBabyGrowthFromHistory(existingRecord.babyId!);
+          }
+        }
+        continue;
+      }
+      await _db
+          .into(_db.trackerRecords)
+          .insertOnConflictUpdate(
+            TrackerRecordsCompanion.insert(
+              id: record.id,
+              type: _safeRecordType(record.type).name,
+              title: record.title,
+              familyId: Value(
+                record.familyId.isEmpty ? familyId : record.familyId,
+              ),
+              babyId: Value(record.babyId),
+              value: Value(record.value),
+              note: Value(record.note),
+              createdByUserId: Value(record.createdByUserId),
+              createdByName: Value(record.createdByName),
+              updatedByUserId: Value(record.updatedByUserId),
+              updatedByName: Value(record.updatedByName),
+              occurredAt: record.occurredAt,
+              createdAt: record.createdAt,
+              updatedAt: record.updatedAt,
+              syncStatus: Value(SyncStatus.synced.name),
+            ),
+          );
+      if (existingRecord == null &&
+          currentUserId != null &&
+          record.createdByUserId != null &&
+          record.createdByUserId != currentUserId) {
+        final notification = await _ensureRemoteRecordNotification(
+          record: record,
+          familyId: familyId,
+          userId: currentUserId,
+        );
+        if (notification != null) createdNotifications.add(notification);
+      } else if (existingRecord != null &&
+          currentUserId != null &&
+          record.updatedByUserId != null &&
+          record.updatedByUserId != currentUserId &&
+          record.updatedAt.isAfter(existingRecord.updatedAt)) {
+        final notification = await _ensureRemoteRecordUpdateNotification(
+          record: record,
+          familyId: familyId,
+          userId: currentUserId,
+        );
+        if (notification != null) createdNotifications.add(notification);
       }
     }
     return createdNotifications;

@@ -42,6 +42,10 @@ abstract class RemoteSyncService {
   Future<void> declineFamilyInvite(FamilyInvite invite);
   Future<List<RemoteFamilyInvite>> fetchPendingFamilyInvites(String email);
   Future<List<RemoteFamilySummary>> fetchMyFamilies();
+  Future<List<RemoteTrackerRecordSummary>> fetchFamilyTrackerRecords(
+    String familyId, {
+    int limit = 60,
+  });
   Stream<RemoteFamilySummary> watchFamily(String familyId);
   Future<void> syncNotificationToken({
     required String token,
@@ -129,6 +133,14 @@ class NoopRemoteSyncService implements RemoteSyncService {
 
   @override
   Future<List<RemoteFamilySummary>> fetchMyFamilies() async {
+    return const [];
+  }
+
+  @override
+  Future<List<RemoteTrackerRecordSummary>> fetchFamilyTrackerRecords(
+    String familyId, {
+    int limit = 60,
+  }) async {
     return const [];
   }
 
@@ -226,7 +238,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
     final ref = _families.doc(family.id);
     final updatePayload = <String, dynamic>{
       'partnerUserIds': family.partnerUserIds
-          .map((item) => item.trim().toLowerCase())
+          .map(_normalizePartnerKey)
           .where((item) => item.isNotEmpty)
           .toSet()
           .toList(),
@@ -433,19 +445,16 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
       'status': 'pending',
       'createdAt': firestore.FieldValue.serverTimestamp(),
     };
+    final resendPayload = <String, dynamic>{
+      ...updatePayload,
+      'status': 'pending',
+      'acceptedUserId': firestore.FieldValue.delete(),
+      'respondedAt': firestore.FieldValue.delete(),
+    };
     try {
+      await ref.update(resendPayload);
+    } catch (_) {
       await ref.set(createPayload);
-    } catch (error) {
-      try {
-        await ref.update({
-          ...updatePayload,
-          'status': 'pending',
-          'acceptedUserId': firestore.FieldValue.delete(),
-          'respondedAt': firestore.FieldValue.delete(),
-        });
-      } catch (_) {
-        Error.throwWithStackTrace(error, StackTrace.current);
-      }
     }
   }
 
@@ -477,23 +486,48 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
   @override
   Future<void> removeFamilyMember(FamilyInvite invite) {
     _requireFirebaseUser();
-    return _familyInvites.doc(invite.id).set({
+    final partnerKeys = {
+      invite.invitedEmail.trim().toLowerCase(),
+      if (invite.acceptedUserId?.trim().isNotEmpty == true)
+        invite.acceptedUserId!.trim(),
+    }.where((item) => item.isNotEmpty).toList();
+    final batch = _firestore.batch();
+    batch.update(_familyInvites.doc(invite.id), {
       'status': 'declined',
       'acceptedUserId': firestore.FieldValue.delete(),
       'respondedAt': firestore.FieldValue.serverTimestamp(),
       'updatedAt': firestore.FieldValue.serverTimestamp(),
-    }, firestore.SetOptions(merge: true));
+    });
+    if (partnerKeys.isNotEmpty) {
+      batch.update(_families.doc(invite.familyId), {
+        'partnerUserIds': firestore.FieldValue.arrayRemove(partnerKeys),
+        'updatedAt': firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    return batch.commit();
   }
 
   @override
   Future<void> acceptFamilyInvite(FamilyInvite invite) {
     final firebaseUser = _requireFirebaseUser();
-    return _familyInvites.doc(invite.id).update({
+    final partnerKeys = {
+      invite.invitedEmail.trim().toLowerCase(),
+      firebaseUser.uid,
+    }.where((item) => item.isNotEmpty).toList();
+    final batch = _firestore.batch();
+    batch.update(_familyInvites.doc(invite.id), {
       'status': 'accepted',
       'acceptedUserId': firebaseUser.uid,
       'respondedAt': firestore.FieldValue.serverTimestamp(),
       'updatedAt': firestore.FieldValue.serverTimestamp(),
     });
+    if (partnerKeys.isNotEmpty) {
+      batch.update(_families.doc(invite.familyId), {
+        'partnerUserIds': firestore.FieldValue.arrayUnion(partnerKeys),
+        'updatedAt': firestore.FieldValue.serverTimestamp(),
+      });
+    }
+    return batch.commit();
   }
 
   @override
@@ -587,10 +621,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
           .where('familyId', isEqualTo: doc.id)
           .limit(5)
           .get();
-      final recordSnapshot = await _trackerRecords
-          .where('familyId', isEqualTo: doc.id)
-          .limit(60)
-          .get();
+      final records = await _fetchRemoteRecords(doc.id, limit: 60);
       final reminderSnapshot = await _reminders
           .where('familyId', isEqualTo: doc.id)
           .limit(40)
@@ -634,9 +665,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
           babies: babySnapshot.docs
               .map((babyDoc) => _remoteBaby(babyDoc, doc.id))
               .toList(),
-          records: recordSnapshot.docs
-              .map((recordDoc) => _remoteRecord(recordDoc, doc.id))
-              .toList(),
+          records: records,
           reminders: reminderSnapshot.docs.map(_remoteReminder).toList(),
           vaccines:
               vaccineSnapshot?.docs.map(_remoteVaccine).toList() ?? const [],
@@ -647,6 +676,15 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
       );
     }
     return summaries;
+  }
+
+  @override
+  Future<List<RemoteTrackerRecordSummary>> fetchFamilyTrackerRecords(
+    String familyId, {
+    int limit = 60,
+  }) {
+    _requireFirebaseUser();
+    return _fetchRemoteRecords(familyId, limit: limit);
   }
 
   @override
@@ -670,6 +708,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
     String? watchedBabyId;
     StreamSubscription<dynamic>? vaccineSubscription;
     StreamSubscription<dynamic>? inviteSubscription;
+    StreamSubscription<dynamic>? recordSubscription;
     String? inviteWatchMode;
 
     Future<void> emit() async {
@@ -692,9 +731,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
           partnerEmails: partnerEmails,
           invites: inviteDocs.map(_remoteInviteFromDoc).toList(),
           babies: babyDocs.map((doc) => _remoteBaby(doc, familyId)).toList(),
-          records: recordDocs
-              .map((doc) => _remoteRecord(doc, familyId))
-              .toList(),
+          records: _remoteRecords(recordDocs, familyId, limit: 80),
           reminders: reminderDocs.map(_remoteReminder).toList(),
           vaccines: vaccineDocs.map(_remoteVaccine).toList(),
           notifications: notificationDocs.map(_remoteNotification).toList(),
@@ -716,6 +753,30 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
             vaccineDocs = snapshot.docs;
             emit();
           }, onError: controller.addError);
+    }
+
+    void watchRecords({required bool fallback}) {
+      unawaited(recordSubscription?.cancel());
+      var query = _trackerRecords.where('familyId', isEqualTo: familyId);
+      if (!fallback) {
+        query = query.orderBy('occurredAt', descending: true).limit(80);
+      } else {
+        query = query.limit(80);
+      }
+      recordSubscription = query.snapshots().listen(
+        (snapshot) {
+          recordDocs = snapshot.docs;
+          emit();
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          if (!fallback) {
+            watchRecords(fallback: true);
+            return;
+          }
+          controller.addError(error, stackTrace);
+        },
+      );
+      subscriptions.add(recordSubscription!);
     }
 
     void watchInvites({required bool owner}) {
@@ -777,16 +838,7 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
                 emit();
               }, onError: controller.addError),
         );
-        subscriptions.add(
-          _trackerRecords
-              .where('familyId', isEqualTo: familyId)
-              .limit(80)
-              .snapshots()
-              .listen((snapshot) {
-                recordDocs = snapshot.docs;
-                emit();
-              }, onError: controller.addError),
-        );
+        watchRecords(fallback: false);
         subscriptions.add(
           _reminders
               .where('familyId', isEqualTo: familyId)
@@ -887,6 +939,37 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
       createdAt: _dateFrom(record['createdAt']) ?? DateTime.now(),
       updatedAt: _dateFrom(record['updatedAt']) ?? DateTime.now(),
     );
+  }
+
+  Future<List<RemoteTrackerRecordSummary>> _fetchRemoteRecords(
+    String familyId, {
+    required int limit,
+  }) async {
+    try {
+      final snapshot = await _trackerRecords
+          .where('familyId', isEqualTo: familyId)
+          .orderBy('occurredAt', descending: true)
+          .limit(limit)
+          .get();
+      return snapshot.docs.map((doc) => _remoteRecord(doc, familyId)).toList();
+    } catch (_) {
+      final snapshot = await _trackerRecords
+          .where('familyId', isEqualTo: familyId)
+          .limit(limit)
+          .get();
+      return _remoteRecords(snapshot.docs, familyId, limit: limit);
+    }
+  }
+
+  List<RemoteTrackerRecordSummary> _remoteRecords(
+    Iterable<firestore.QueryDocumentSnapshot<Map<String, dynamic>>> docs,
+    String fallbackFamilyId, {
+    int? limit,
+  }) {
+    final records =
+        docs.map((doc) => _remoteRecord(doc, fallbackFamilyId)).toList()
+          ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return limit == null ? records : records.take(limit).toList();
   }
 
   RemoteReminderSummary _remoteReminder(
@@ -1069,6 +1152,11 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
         .map((item) => item.toString().trim())
         .where((item) => item.isNotEmpty)
         .toList();
+  }
+
+  String _normalizePartnerKey(String value) {
+    final trimmed = value.trim();
+    return trimmed.contains('@') ? trimmed.toLowerCase() : trimmed;
   }
 
   String? _blankToNull(String? value) {

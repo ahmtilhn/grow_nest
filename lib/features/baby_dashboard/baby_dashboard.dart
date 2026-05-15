@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_controller.dart';
 import '../../app/theme/app_theme.dart';
 import '../../core/utils/app_calculators.dart';
+import '../../core/widgets/baby_status_widget_service.dart';
 import '../../core/widgets/app_ui.dart';
 import '../../domain/entities/app_entities.dart';
 
@@ -13,9 +15,8 @@ class BabyDashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(appSnapshotProvider);
-    final controller = ref.read(appControllerProvider);
-    final snapshot = controller.snapshot;
+    ref.watch(appControllerRevisionProvider);
+    final snapshot = ref.watch(appSnapshotProvider);
     final baby = snapshot.baby;
     final name = baby?.name ?? 'Bebek profili';
     final age = baby == null
@@ -87,6 +88,8 @@ class BabyDashboardScreen extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        const _WidgetToolbar(),
         if (health != null) ...[
           const SizedBox(height: 12),
           const MedicalWarningCard(),
@@ -339,6 +342,251 @@ class _LastCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WidgetToolbar extends ConsumerWidget {
+  const _WidgetToolbar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(appControllerRevisionProvider);
+    final controller = ref.read(appControllerProvider);
+    final mlOptions = controller.widgetFeedingMlOptions;
+    return AppCard(
+      color: const Color(0xFFEAF7FA),
+      borderColor: const Color(0xFFCFEAF0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const SoftIcon(icon: Icons.widgets_rounded),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Widgetlar\nAna ekran bakım kumandası ve kilit ekranı özeti.',
+                ),
+              ),
+              IconButton(
+                tooltip: 'Ana ekrana ekle',
+                onPressed: () => _requestWidget(context),
+                icon: const Icon(Icons.add_to_home_screen_rounded),
+              ),
+              IconButton(
+                tooltip: controller.lockScreenSummaryEnabled
+                    ? 'Kilit ekranı özetini kapat'
+                    : 'Kilit ekranında göster',
+                onPressed: () => _toggleLockScreenSummary(context, controller),
+                icon: Icon(
+                  controller.lockScreenSummaryEnabled
+                      ? Icons.lock_open_rounded
+                      : Icons.lock_clock_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: .74),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: const Color(0xFFCFEAF0)),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Beslenme ml seçenekleri',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                for (final amount in mlOptions) ...[
+                  _MlPill(amount),
+                  const SizedBox(width: 6),
+                ],
+                IconButton(
+                  tooltip: 'Ml seçeneklerini düzenle',
+                  onPressed: () => _editFeedingOptions(context, controller),
+                  icon: const Icon(Icons.tune_rounded),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editFeedingOptions(
+    BuildContext context,
+    AppController controller,
+  ) async {
+    final controllers = [
+      for (final amount in controller.widgetFeedingMlOptions)
+        TextEditingController(text: '$amount'),
+    ];
+    while (controllers.length < 3) {
+      controllers.add(TextEditingController());
+    }
+    String? errorText;
+    try {
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: const Text('Widget beslenme seçenekleri'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Ana ekran widgetında görünecek 3 hızlı ml değerini seçin.',
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    for (var index = 0; index < 3; index++) ...[
+                      Expanded(
+                        child: TextField(
+                          controller: controllers[index],
+                          keyboardType: TextInputType.number,
+                          textInputAction: index == 2
+                              ? TextInputAction.done
+                              : TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(3),
+                          ],
+                          decoration: InputDecoration(
+                            labelText: '${index + 1}. ml',
+                          ),
+                        ),
+                      ),
+                      if (index < 2) const SizedBox(width: 10),
+                    ],
+                  ],
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    errorText!,
+                    style: const TextStyle(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Vazgeç'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final values = controllers
+                      .map((item) => int.tryParse(item.text.trim()))
+                      .whereType<int>()
+                      .toList();
+                  if (values.length != 3 ||
+                      values.any((item) => item < 10 || item > 300)) {
+                    setState(
+                      () => errorText =
+                          '3 değer girin. Her biri 10-300 ml aralığında olmalı.',
+                    );
+                    return;
+                  }
+                  if (values.toSet().length != 3) {
+                    setState(
+                      () => errorText = 'Seçenekler birbirinden farklı olmalı.',
+                    );
+                    return;
+                  }
+                  Navigator.pop(context, true);
+                },
+                child: const Text('Kaydet'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (saved != true) return;
+      final values = controllers
+          .map((item) => int.parse(item.text.trim()))
+          .toList();
+      await controller.setWidgetFeedingMlOptions(values);
+      if (context.mounted) {
+        showAppSnack(context, 'Widget ml seçenekleri güncellendi.');
+      }
+    } finally {
+      for (final controller in controllers) {
+        controller.dispose();
+      }
+    }
+  }
+
+  Future<void> _requestWidget(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await BabyStatusWidgetService.requestHomeWidgetPin();
+    if (!context.mounted) return;
+    final message = switch (result) {
+      WidgetPinResult.requested => 'Ana ekran widget ekleme penceresi açıldı.',
+      WidgetPinResult.unsupported =>
+        'Bu cihaz otomatik widget eklemeyi desteklemiyor. Widget listesinden MiniAdımlar’ı ekleyin.',
+      WidgetPinResult.iosManual =>
+        'iOS widget eklemeyi uygulama içinden otomatik başlatmıyor. Ana ekrandan MiniAdımlar widget’ını seçin.',
+    };
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _toggleLockScreenSummary(
+    BuildContext context,
+    AppController controller,
+  ) async {
+    final next = !controller.lockScreenSummaryEnabled;
+    try {
+      await controller.setLockScreenSummaryEnabled(next);
+      if (!context.mounted) return;
+      showAppSnack(
+        context,
+        next
+            ? 'Kilit ekranı özeti açıldı. Bildirim olarak kilit ekranında görünecek.'
+            : 'Kilit ekranı özeti kapatıldı.',
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      showAppSnack(context, userFacingErrorMessage(error));
+    }
+  }
+}
+
+class _MlPill extends StatelessWidget {
+  const _MlPill(this.amount);
+
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.softBlue,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: const Color(0xFFCFEAF0)),
+      ),
+      child: Text(
+        '$amount',
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }

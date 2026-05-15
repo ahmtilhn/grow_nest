@@ -103,6 +103,11 @@ class ScheduledNotification {
 abstract class NotificationService {
   Future<bool> requestPermission();
   Future<void> show(ScheduledNotification notification);
+  Future<void> showLockScreenSummary({
+    required String title,
+    required String body,
+  });
+  Future<void> cancelLockScreenSummary();
   Future<void> schedule(ScheduledNotification notification);
   Future<void> cancel(String id);
 }
@@ -124,6 +129,26 @@ class InMemoryNotificationService implements NotificationService {
   Future<void> show(ScheduledNotification notification) async {
     if (!permissionGranted) return;
     shown[notification.id] = notification;
+  }
+
+  @override
+  Future<void> showLockScreenSummary({
+    required String title,
+    required String body,
+  }) async {
+    if (!permissionGranted) return;
+    shown['lock-screen-summary'] = ScheduledNotification(
+      id: 'lock-screen-summary',
+      title: title,
+      body: body,
+      scheduledAt: DateTime.now(),
+      sound: 'silent',
+    );
+  }
+
+  @override
+  Future<void> cancelLockScreenSummary() async {
+    shown.remove('lock-screen-summary');
   }
 
   @override
@@ -162,6 +187,32 @@ class LocalNotificationService implements NotificationService {
         'Sakin çan',
         description: 'MiniAdımlar aile ve hatırlatıcı bildirimleri',
         importance: Importance.high,
+      ),
+    );
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'mini_adimlar_gentle_bell',
+        'YumuÅŸak zil',
+        description: 'MiniAdÄ±mlar hatÄ±rlatÄ±cÄ± bildirimleri',
+        importance: Importance.high,
+      ),
+    );
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'mini_adimlar_silent',
+        'Sessiz',
+        description: 'MiniAdÄ±mlar sessiz hatÄ±rlatÄ±cÄ± bildirimleri',
+        importance: Importance.defaultImportance,
+        playSound: false,
+      ),
+    );
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'mini_adimlar_lock_screen',
+        'Kilit ekranı özeti',
+        description:
+            'Son beslenme, bez ve uyku durumunu kilit ekranında gösterir',
+        importance: Importance.low,
       ),
     );
     return LocalNotificationService._(plugin);
@@ -211,6 +262,46 @@ class LocalNotificationService implements NotificationService {
       body: notification.body,
       notificationDetails: _details(notification.sound),
     );
+  }
+
+  @override
+  Future<void> showLockScreenSummary({
+    required String title,
+    required String body,
+  }) {
+    return _plugin.show(
+      id: _intId('lock-screen-summary'),
+      title: title,
+      body: body,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'mini_adimlar_lock_screen',
+          'Kilit ekranı özeti',
+          channelDescription:
+              'Son beslenme, bez ve uyku durumunu kilit ekranında gösterir',
+          importance: Importance.low,
+          priority: Priority.high,
+          visibility: NotificationVisibility.public,
+          ongoing: true,
+          autoCancel: false,
+          onlyAlertOnce: true,
+          silent: true,
+          showWhen: false,
+          category: AndroidNotificationCategory.status,
+          color: Color(0xFF13A6C8),
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: false,
+          presentSound: false,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<void> cancelLockScreenSummary() {
+    return _plugin.cancel(id: _intId('lock-screen-summary'));
   }
 
   NotificationDetails _details(String sound) {

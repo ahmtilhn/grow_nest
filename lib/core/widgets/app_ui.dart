@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../app/localization/app_localizations.dart';
 import '../../app/theme/app_theme.dart';
 
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 class AppCard extends StatelessWidget {
   const AppCard({
     super.key,
@@ -308,7 +310,14 @@ class LoadingState extends StatelessWidget {
 }
 
 void showAppSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  final messenger =
+      rootScaffoldMessengerKey.currentState ??
+      ScaffoldMessenger.maybeOf(context);
+  if (messenger == null) {
+    debugPrint('SnackBar skipped because no ScaffoldMessenger is available.');
+    return;
+  }
+  messenger.showSnackBar(SnackBar(content: Text(message)));
 }
 
 String userFacingErrorMessage(Object error) {

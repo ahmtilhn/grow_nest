@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/ai/ai_analysis_service.dart';
+import '../core/calendar/calendar_sync_service.dart';
 import '../core/firebase/email_verification_service.dart';
 import '../core/firebase/firebase_auth_gateway.dart';
 import '../core/firebase/firebase_sync_service.dart';
@@ -11,6 +12,7 @@ import '../core/notifications/notification_service.dart';
 import '../core/sync/remote_sync_models.dart';
 import '../core/sync/sync_queue.dart';
 import '../core/utils/app_calculators.dart';
+import '../core/widgets/baby_status_widget_service.dart';
 import '../data/repositories/app_repository.dart';
 import '../domain/entities/app_entities.dart';
 import '../domain/services/family_permission_policy.dart';
@@ -19,10 +21,10 @@ final appControllerProvider = Provider<AppController>(
   (ref) => throw UnimplementedError(),
 );
 
-final _appControllerRevisionProvider =
-    NotifierProvider<_AppControllerRevision, int>(_AppControllerRevision.new);
+final appControllerRevisionProvider =
+    NotifierProvider<AppControllerRevision, int>(AppControllerRevision.new);
 
-class _AppControllerRevision extends Notifier<int> {
+class AppControllerRevision extends Notifier<int> {
   @override
   int build() {
     final controller = ref.watch(appControllerProvider);
@@ -35,7 +37,7 @@ class _AppControllerRevision extends Notifier<int> {
 }
 
 final appSnapshotProvider = Provider<AppSnapshot>((ref) {
-  ref.watch(_appControllerRevisionProvider);
+  ref.watch(appControllerRevisionProvider);
   return ref.watch(appControllerProvider).snapshot;
 });
 
@@ -46,12 +48,14 @@ class AppController extends ChangeNotifier {
     EmailVerificationService? emailVerificationService,
     RemoteSyncService? syncService,
     NotificationService? notificationService,
+    CalendarSyncService? calendarSyncService,
   }) : ai = MockAiAnalysisService(),
        auth = authGateway ?? LocalAuthGateway(),
        emailVerification =
            emailVerificationService ?? const NoopEmailVerificationService(),
        remoteSync = syncService ?? const NoopRemoteSyncService(),
-       notifications = notificationService ?? InMemoryNotificationService();
+       notifications = notificationService ?? InMemoryNotificationService(),
+       calendarSync = calendarSyncService ?? const NoopCalendarSyncService();
 
   final AppRepository _repository;
   final AiAnalysisService ai;
@@ -59,13 +63,20 @@ class AppController extends ChangeNotifier {
   final EmailVerificationService emailVerification;
   final RemoteSyncService remoteSync;
   final NotificationService notifications;
+  final CalendarSyncService calendarSync;
 
   AppSnapshot snapshot = const AppSnapshot();
   bool isLoading = true;
+  bool lockScreenSummaryEnabled = false;
+  bool deviceCalendarSyncEnabled = false;
+  List<int> widgetFeedingMlOptions = const [60, 90, 120];
   String? lastError;
   StreamSubscription<RemoteFamilySummary>? _familySubscription;
   String? _subscribedFamilyId;
   bool _applyingRemoteFamily = false;
+  int _liveFamilyUpdatePauseDepth = 0;
+  RemoteFamilySummary? _deferredLiveFamily;
+  Future<void>? _pendingTrackerSyncInFlight;
 
   bool get isAuthenticated => snapshot.user != null;
   bool get onboardingComplete => snapshot.onboardingComplete;
@@ -89,11 +100,80 @@ class AppController extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     snapshot = await _repository.loadSnapshot();
+    lockScreenSummaryEnabled = await _repository.lockScreenSummaryEnabled();
+    deviceCalendarSyncEnabled = await _repository.deviceCalendarSyncEnabled();
+    widgetFeedingMlOptions = await _repository.widgetFeedingMlOptions();
     isLoading = false;
     notifyListeners();
+    unawaited(
+      BabyStatusWidgetService.syncSnapshot(
+        snapshot,
+        feedingMlOptions: widgetFeedingMlOptions,
+      ),
+    );
+    unawaited(_syncLockScreenSummary());
+    if (syncLiveFamily) {
+      await _syncLiveFamilySubscription();
+      unawaited(_syncPendingTrackerRecords());
+    }
+  }
+
+  Future<void> _refreshSnapshotAfterMutation({
+    bool syncLiveFamily = true,
+  }) async {
+    snapshot = await _repository.loadSnapshot();
+    lockScreenSummaryEnabled = await _repository.lockScreenSummaryEnabled();
+    deviceCalendarSyncEnabled = await _repository.deviceCalendarSyncEnabled();
+    widgetFeedingMlOptions = await _repository.widgetFeedingMlOptions();
+    notifyListeners();
+    unawaited(
+      BabyStatusWidgetService.syncSnapshot(
+        snapshot,
+        feedingMlOptions: widgetFeedingMlOptions,
+      ),
+    );
+    unawaited(_syncLockScreenSummary());
     if (syncLiveFamily) {
       await _syncLiveFamilySubscription();
     }
+  }
+
+  Future<void> refreshAfterExternalChange({bool refreshRemote = true}) async {
+    await _refreshSnapshotAfterMutation();
+    unawaited(_syncPendingTrackerRecords());
+    if (!refreshRemote) return;
+    unawaited(
+      refreshFamilyInvites(showDeviceNotification: false, force: false),
+    );
+    unawaited(
+      refreshRemoteFamilies(showDeviceNotification: false, force: false),
+    );
+  }
+
+  void refreshTimeSensitiveViews() {
+    if (isLoading) return;
+    notifyListeners();
+    unawaited(BabyStatusWidgetService.refresh());
+    unawaited(_syncLockScreenSummary());
+  }
+
+  void pauseLiveFamilyUpdates() {
+    _liveFamilyUpdatePauseDepth += 1;
+  }
+
+  Future<bool> resumeLiveFamilyUpdates({bool applyDeferred = true}) async {
+    if (_liveFamilyUpdatePauseDepth == 0) return false;
+    _liveFamilyUpdatePauseDepth -= 1;
+    if (_liveFamilyUpdatePauseDepth > 0) return false;
+    final family = _deferredLiveFamily;
+    _deferredLiveFamily = null;
+    if (!applyDeferred || family == null) return false;
+    await _applyRemoteFamily(family);
+    return true;
+  }
+
+  Future<void> refreshSnapshotAfterMutation({bool syncLiveFamily = true}) {
+    return _refreshSnapshotAfterMutation(syncLiveFamily: syncLiveFamily);
   }
 
   Future<void> loginLocal(String email, String password) async {
@@ -282,6 +362,51 @@ class AppController extends ChangeNotifier {
     await load();
   }
 
+  Future<void> setLockScreenSummaryEnabled(bool enabled) async {
+    if (enabled) {
+      final allowed = await notifications.requestPermission();
+      if (!allowed) {
+        throw const AppControllerException(
+          'Kilit ekranı özeti için bildirim izni gerekli.',
+        );
+      }
+    }
+    await _repository.setLockScreenSummaryEnabled(enabled);
+    lockScreenSummaryEnabled = enabled;
+    notifyListeners();
+    await _syncLockScreenSummary();
+  }
+
+  Future<void> setWidgetFeedingMlOptions(List<int> options) async {
+    await _repository.setWidgetFeedingMlOptions(options);
+    widgetFeedingMlOptions = await _repository.widgetFeedingMlOptions();
+    notifyListeners();
+    await BabyStatusWidgetService.syncSnapshot(
+      snapshot,
+      feedingMlOptions: widgetFeedingMlOptions,
+    );
+  }
+
+  Future<void> setDeviceCalendarSyncEnabled(bool enabled) async {
+    _requireVerifiedAccount();
+    if (enabled) {
+      final allowed = await calendarSync.requestAccess();
+      if (!allowed) {
+        throw const AppControllerException(
+          'Telefon takvimi izni alınamadı. İzin ekranından tekrar deneyin.',
+        );
+      }
+    } else {
+      await _deleteAllDeviceCalendarReminderEvents();
+    }
+    await _repository.setDeviceCalendarSyncEnabled(enabled);
+    deviceCalendarSyncEnabled = enabled;
+    notifyListeners();
+    if (enabled) {
+      await _syncAllActiveRemindersToDeviceCalendar();
+    }
+  }
+
   Future<void> syncNotificationToken({
     required String token,
     required String platform,
@@ -345,6 +470,7 @@ class AppController extends ChangeNotifier {
     String? value,
     String? note,
     DateTime? occurredAt,
+    bool syncRemote = true,
   }) async {
     _requireVerifiedAccount();
     _requireRecordPermission(type, isEdit: false);
@@ -366,8 +492,10 @@ class AppController extends ChangeNotifier {
       updatedAt: now,
     );
     await _repository.addRecord(record);
-    await load();
-    await _syncSafely(() => remoteSync.syncTrackerRecord(record));
+    await _refreshSnapshotAfterMutation(syncLiveFamily: syncRemote);
+    if (syncRemote) {
+      await _syncTrackerRecordSafely(record);
+    }
     return record;
   }
 
@@ -392,7 +520,7 @@ class AppController extends ChangeNotifier {
     return record;
   }
 
-  Future<TrackerRecord> startSleep() async {
+  Future<TrackerRecord> startSleep({bool syncRemote = true}) async {
     _requireVerifiedAccount();
     _requirePermission(FamilyPermission.manageSleep);
     final active = activeSleepRecord;
@@ -405,6 +533,7 @@ class AppController extends ChangeNotifier {
       type: RecordType.sleep,
       title: 'Uyku başladı',
       value: 'active',
+      syncRemote: syncRemote,
     );
   }
 
@@ -417,7 +546,10 @@ class AppController extends ChangeNotifier {
     return null;
   }
 
-  Future<void> finishSleep(TrackerRecord activeSleep) async {
+  Future<void> finishSleep(
+    TrackerRecord activeSleep, {
+    bool syncRemote = true,
+  }) async {
     _requireVerifiedAccount();
     _requirePermission(FamilyPermission.manageSleep);
     final now = DateTime.now();
@@ -435,8 +567,14 @@ class AppController extends ChangeNotifier {
       updatedAt: now,
     );
     await _repository.updateRecord(completed);
-    await load();
-    await _syncSafely(() => remoteSync.syncTrackerRecord(completed));
+    await _refreshSnapshotAfterMutation(syncLiveFamily: syncRemote);
+    if (syncRemote) {
+      await _syncTrackerRecordSafely(completed);
+    }
+  }
+
+  Future<void> syncPendingTrackerRecords() {
+    return _syncPendingTrackerRecords();
   }
 
   Future<void> updateRecord(TrackerRecord record) async {
@@ -450,7 +588,7 @@ class AppController extends ChangeNotifier {
     );
     await _repository.updateRecord(updated);
     await load();
-    await _syncSafely(() => remoteSync.syncTrackerRecord(updated));
+    await _syncTrackerRecordSafely(updated);
   }
 
   Future<void> deleteRecord(String recordId) async {
@@ -532,6 +670,7 @@ class AppController extends ChangeNotifier {
     String? displayName,
     String? roleLabel,
     required List<FamilyPermission> permissions,
+    bool refreshSnapshot = true,
   }) async {
     _requireVerifiedAccount();
     _requirePermission(FamilyPermission.manageUserPermissions);
@@ -540,15 +679,15 @@ class AppController extends ChangeNotifier {
       throw const AppControllerException('Davet veya aile üyesi bulunamadı.');
     }
     if (remoteSync.isEnabled) {
-      await _runRequiredFirebaseAction(
-        () => remoteSync.updateFamilyInvitePermissions(
+      await _runRequiredFirebaseAction(() async {
+        await _syncInvitePrerequisitesStrict();
+        await remoteSync.updateFamilyInvitePermissions(
           invite: invite,
           invitedDisplayName: displayName,
           roleLabel: roleLabel,
           permissions: permissions,
-        ),
-        'Yetkiler Firebase ile güncellenemedi. Lütfen tekrar deneyin.',
-      );
+        );
+      }, 'Yetkiler Firebase ile güncellenemedi. Lütfen tekrar deneyin.');
     }
     await _repository.updateFamilyInvitePermissions(
       inviteId: inviteId,
@@ -556,7 +695,9 @@ class AppController extends ChangeNotifier {
       roleLabel: roleLabel,
       permissions: permissions,
     );
-    await load();
+    if (refreshSnapshot) {
+      await _refreshSnapshotAfterMutation();
+    }
   }
 
   Future<void> removeFamilyMember(String inviteId) async {
@@ -578,7 +719,7 @@ class AppController extends ChangeNotifier {
       );
     }
     await _repository.removeFamilyMember(inviteId);
-    await load();
+    await _refreshSnapshotAfterMutation();
   }
 
   Future<void> acceptFamilyInvite(String inviteId) async {
@@ -722,6 +863,8 @@ class AppController extends ChangeNotifier {
       createdAt: now,
     );
     await _repository.addReminder(reminder);
+    await _scheduleReminderNotifications(reminder);
+    await _syncReminderToDeviceCalendar(reminder);
     if (snapshot.family != null) {
       await _syncSafely(
         () => remoteSync.syncReminder(
@@ -736,9 +879,11 @@ class AppController extends ChangeNotifier {
 
   Future<void> updateReminder(ReminderItem reminder) async {
     _requireVerifiedAccount();
-    _requirePermission(FamilyPermission.addAppointment);
+    _requireReminderPermission(reminder.category);
     await _cancelReminderNotifications(reminder.id);
     await _repository.updateReminder(reminder);
+    await _scheduleReminderNotifications(reminder);
+    await _syncReminderToDeviceCalendar(reminder);
     if (snapshot.family != null) {
       await _syncSafely(
         () => remoteSync.syncReminder(
@@ -755,6 +900,7 @@ class AppController extends ChangeNotifier {
     _requireVerifiedAccount();
     _requirePermission(FamilyPermission.deleteRecords);
     await _cancelReminderNotifications(reminderId);
+    await _deleteDeviceCalendarReminderEvents(reminderId);
     await _repository.deleteReminder(reminderId);
     if (snapshot.family != null) {
       await _syncSafely(() => remoteSync.deleteReminder(reminderId));
@@ -795,15 +941,20 @@ class AppController extends ChangeNotifier {
     if (!force && _isRemoteRefreshFresh(_lastInviteRefreshAt)) {
       return Future.value();
     }
-    final future = _refreshFamilyInvitesNow().whenComplete(() {
-      _lastInviteRefreshAt = DateTime.now();
-      _inviteRefreshInFlight = null;
-    });
+    final future =
+        _refreshFamilyInvitesNow(
+          showDeviceNotification: showDeviceNotification,
+        ).whenComplete(() {
+          _lastInviteRefreshAt = DateTime.now();
+          _inviteRefreshInFlight = null;
+        });
     _inviteRefreshInFlight = future;
     return future;
   }
 
-  Future<void> _refreshFamilyInvitesNow() async {
+  Future<void> _refreshFamilyInvitesNow({
+    required bool showDeviceNotification,
+  }) async {
     final user = snapshot.user;
     if (user == null) return;
     if (remoteSync.isEnabled) {
@@ -817,7 +968,11 @@ class AppController extends ChangeNotifier {
       }
     }
 
-    await _repository.createPendingInviteNotificationsForCurrentUser();
+    final createdNotifications = await _repository
+        .createPendingInviteNotificationsForCurrentUser();
+    if (showDeviceNotification) {
+      await _showFamilyNotifications(createdNotifications);
+    }
     await load();
   }
 
@@ -830,20 +985,59 @@ class AppController extends ChangeNotifier {
     if (!force && _isRemoteRefreshFresh(_lastRemoteFamilyRefreshAt)) {
       return _syncLiveFamilySubscription();
     }
-    final future = _refreshRemoteFamiliesNow().whenComplete(() {
-      _lastRemoteFamilyRefreshAt = DateTime.now();
-      _remoteFamilyRefreshInFlight = null;
-    });
+    final future =
+        _refreshRemoteFamiliesNow(
+          showDeviceNotification: showDeviceNotification,
+        ).whenComplete(() {
+          _lastRemoteFamilyRefreshAt = DateTime.now();
+          _remoteFamilyRefreshInFlight = null;
+        });
     _remoteFamilyRefreshInFlight = future;
     return future;
   }
 
-  Future<void> _refreshRemoteFamiliesNow() async {
+  Future<void> refreshRemoteWidgetRecords({
+    String? familyId,
+    bool showDeviceNotification = false,
+  }) async {
+    final targetFamilyId = familyId ?? snapshot.family?.id;
+    if (!remoteSync.isEnabled ||
+        snapshot.user == null ||
+        targetFamilyId == null ||
+        targetFamilyId.isEmpty) {
+      return;
+    }
+    try {
+      final records = await remoteSync.fetchFamilyTrackerRecords(
+        targetFamilyId,
+        limit: 60,
+      );
+      final createdNotifications = await _repository.upsertRemoteTrackerRecords(
+        familyId: targetFamilyId,
+        records: records,
+      );
+      if (showDeviceNotification) {
+        await _showFamilyNotifications(createdNotifications);
+      }
+      await load(syncLiveFamily: false);
+    } catch (_) {
+      lastError = 'Firebase widget synchronization is pending.';
+    }
+  }
+
+  Future<void> _refreshRemoteFamiliesNow({
+    required bool showDeviceNotification,
+  }) async {
     if (!remoteSync.isEnabled || snapshot.user == null) return;
     try {
       final families = await remoteSync.fetchMyFamilies();
       for (final family in families) {
-        await _repository.upsertRemoteFamily(family);
+        final createdNotifications = await _repository.upsertRemoteFamily(
+          family,
+        );
+        if (showDeviceNotification) {
+          await _showFamilyNotifications(createdNotifications);
+        }
       }
       await load();
       await _syncLiveFamilySubscription();
@@ -874,19 +1068,28 @@ class AppController extends ChangeNotifier {
         .watchFamily(familyId)
         .listen(
           (family) async {
-            if (_applyingRemoteFamily) return;
-            _applyingRemoteFamily = true;
-            try {
-              await _repository.upsertRemoteFamily(family);
-              await load(syncLiveFamily: false);
-            } finally {
-              _applyingRemoteFamily = false;
+            if (_liveFamilyUpdatePauseDepth > 0) {
+              _deferredLiveFamily = family;
+              return;
             }
+            await _applyRemoteFamily(family);
           },
           onError: (_) {
             lastError = 'Firebase canlı senkronizasyon beklemede.';
           },
         );
+  }
+
+  Future<void> _applyRemoteFamily(RemoteFamilySummary family) async {
+    if (_applyingRemoteFamily) return;
+    _applyingRemoteFamily = true;
+    try {
+      final createdNotifications = await _repository.upsertRemoteFamily(family);
+      await _showFamilyNotifications(createdNotifications);
+      await load(syncLiveFamily: false);
+    } finally {
+      _applyingRemoteFamily = false;
+    }
   }
 
   Future<void> _syncCareState() async {
@@ -931,12 +1134,106 @@ class AppController extends ChangeNotifier {
     await _syncSafely(() => remoteSync.syncPregnancy(pregnancy));
   }
 
+  Future<void> _showFamilyNotifications(
+    List<AppNotification> appNotifications,
+  ) async {
+    if (appNotifications.isEmpty) return;
+    if (!snapshot.notificationsEnabled ||
+        !snapshot.familyNotificationsEnabled) {
+      return;
+    }
+    final permission = await notifications.requestPermission();
+    if (!permission) return;
+    for (final notification in appNotifications) {
+      await notifications.show(
+        ScheduledNotification(
+          id: 'family-${notification.id}',
+          title: notification.title,
+          body: notification.body,
+          scheduledAt: DateTime.now(),
+          sound: snapshot.notificationSound,
+        ),
+      );
+    }
+  }
+
   Future<void> _syncSafely(Future<void> Function() action) async {
     if (!remoteSync.isEnabled) return;
     try {
       await action();
     } catch (_) {
       lastError = 'Firebase senkronizasyonu beklemede.';
+    }
+  }
+
+  Future<void> _syncLockScreenSummary() async {
+    if (!lockScreenSummaryEnabled ||
+        snapshot.user == null ||
+        snapshot.baby == null) {
+      await notifications.cancelLockScreenSummary();
+      return;
+    }
+    final feeding = _latestRecord(RecordType.feeding);
+    final diaper = _latestRecord(RecordType.diaper);
+    final sleep = _latestRecord(RecordType.sleep);
+    final sleepLabel = sleep?.value == 'active'
+        ? 'Uyuyor'
+        : _ago(sleep?.occurredAt);
+    await notifications.showLockScreenSummary(
+      title: 'MiniAdımlar günlük özet',
+      body:
+          'Beslenme ${_clock(feeding?.occurredAt)} (${_ago(feeding?.occurredAt)}) • '
+          'Bez ${_clock(diaper?.occurredAt)} (${_ago(diaper?.occurredAt)}) • '
+          'Uyku $sleepLabel',
+    );
+  }
+
+  TrackerRecord? _latestRecord(RecordType type) {
+    for (final record in snapshot.records) {
+      if (record.type == type) return record;
+    }
+    return null;
+  }
+
+  String _clock(DateTime? value) {
+    if (value == null) return '--';
+    final local = value.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _ago(DateTime? value) {
+    if (value == null) return '--';
+    final minutes = DateTime.now().difference(value).inMinutes.clamp(0, 9999);
+    if (minutes < 60) return '${minutes}dk önce';
+    return '${minutes ~/ 60}s ${(minutes % 60).toString().padLeft(2, '0')}dk önce';
+  }
+
+  Future<void> _syncTrackerRecordSafely(TrackerRecord record) async {
+    if (!remoteSync.isEnabled) return;
+    try {
+      await remoteSync.syncTrackerRecord(record);
+      await _repository.markTrackerRecordSynced(record.id);
+    } catch (_) {
+      lastError = 'Firebase senkronizasyonu beklemede.';
+    }
+  }
+
+  Future<void> _syncPendingTrackerRecords() {
+    final inFlight = _pendingTrackerSyncInFlight;
+    if (inFlight != null) return inFlight;
+    final future = _syncPendingTrackerRecordsNow().whenComplete(() {
+      _pendingTrackerSyncInFlight = null;
+    });
+    _pendingTrackerSyncInFlight = future;
+    return future;
+  }
+
+  Future<void> _syncPendingTrackerRecordsNow() async {
+    if (!remoteSync.isEnabled || snapshot.user == null) return;
+    final pending = await _repository.pendingTrackerRecords();
+    for (final record in pending) {
+      await _syncTrackerRecordSafely(record);
     }
   }
 
@@ -1043,6 +1340,88 @@ class AppController extends ChangeNotifier {
     for (var index = 0; index < 32; index++) {
       await notifications.cancel('$reminderId-$index');
     }
+  }
+
+  Future<void> _syncAllActiveRemindersToDeviceCalendar() async {
+    for (final reminder in snapshot.reminders.where((item) => item.isActive)) {
+      await _syncReminderToDeviceCalendar(reminder);
+    }
+  }
+
+  Future<void> _syncReminderToDeviceCalendar(ReminderItem reminder) async {
+    if (!deviceCalendarSyncEnabled) return;
+    try {
+      final existingEventIds = await _repository.calendarEventIdsForReminder(
+        reminder.id,
+      );
+      final eventIds = await calendarSync.replaceReminderEvents(
+        reminder,
+        existingEventIds: existingEventIds,
+      );
+      await _repository.setCalendarEventIdsForReminder(reminder.id, eventIds);
+    } catch (error, stackTrace) {
+      debugPrint('Device calendar reminder sync failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      lastError = 'Telefon takvimi eşitlemesi tamamlanamadı.';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _deleteDeviceCalendarReminderEvents(String reminderId) async {
+    try {
+      final eventIds = await _repository.calendarEventIdsForReminder(
+        reminderId,
+      );
+      await calendarSync.deleteReminderEvents(eventIds);
+      await _repository.removeCalendarEventIdsForReminder(reminderId);
+    } catch (error, stackTrace) {
+      debugPrint('Device calendar reminder delete failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      lastError = 'Telefon takvimi eşitlemesi tamamlanamadı.';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _deleteAllDeviceCalendarReminderEvents() async {
+    final mapping = await _repository.calendarReminderEventIds();
+    for (final reminderId in mapping.keys) {
+      await _deleteDeviceCalendarReminderEvents(reminderId);
+    }
+    await _repository.clearCalendarReminderEventIds();
+  }
+
+  Future<void> _scheduleReminderNotifications(ReminderItem reminder) async {
+    if (!reminder.isActive ||
+        !snapshot.notificationsEnabled ||
+        !snapshot.reminderNotificationsEnabled) {
+      return;
+    }
+    final plan = ReminderPlan.tryParse(reminder.frequency);
+    await ReminderScheduler(notifications).schedule(
+      id: reminder.id,
+      title: reminder.title,
+      category: _reminderCategoryLabel(reminder.category),
+      time: reminder.time,
+      notes: reminder.notes ?? '',
+      frequency: ReminderScheduler.frequencyFromStoredValue(reminder.frequency),
+      plan: plan,
+      sound: snapshot.notificationSound,
+    );
+  }
+
+  String _reminderCategoryLabel(ReminderCategory category) {
+    return switch (category) {
+      ReminderCategory.health => 'Sağlık',
+      ReminderCategory.water => 'Su',
+      ReminderCategory.feeding => 'Beslenme',
+      ReminderCategory.vaccine => 'Aşı',
+      ReminderCategory.appointment => 'Randevu',
+      ReminderCategory.vitamin => 'Vitamin',
+      ReminderCategory.medicine => 'İlaç',
+      ReminderCategory.sleep => 'Uyku',
+      ReminderCategory.diaper => 'Bez',
+      ReminderCategory.custom => 'Hatırlatıcı',
+    };
   }
 
   FamilyInvite? _inviteById(String inviteId) {

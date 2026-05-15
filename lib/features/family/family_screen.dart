@@ -434,163 +434,209 @@ class _FamilyScreenState extends ConsumerState<FamilyScreen> {
   }
 
   Future<void> _editInvitePermissions(FamilyInvite invite) async {
-    final rootContext = context;
     final nameController = TextEditingController(
       text: invite.invitedDisplayName ?? '',
     );
+    final controller = ref.read(appControllerProvider);
     var roleLabel = _supportedRoleLabel(invite.roleLabel);
     var selected = invite.permissions.isEmpty
         ? FamilyPermissionSets.defaultsForRole(roleLabel).toSet()
         : invite.permissions.toSet();
     var saving = false;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            Future<void> save() async {
-              if (saving) return;
-              setSheetState(() => saving = true);
-              var saved = false;
-              try {
-                await ref
-                    .read(appControllerProvider)
-                    .updateFamilyInvitePermissions(
-                      inviteId: invite.id,
-                      displayName: nameController.text,
-                      roleLabel: roleLabel,
-                      permissions: selected.toList(),
-                    );
-                saved = true;
-                if (sheetContext.mounted) {
-                  Navigator.pop(sheetContext);
-                }
-                if (rootContext.mounted) {
-                  showAppSnack(rootContext, 'Yetkiler güncellendi.');
-                }
-              } catch (error) {
-                if (rootContext.mounted) {
-                  showAppSnack(rootContext, userFacingErrorMessage(error));
-                }
-              } finally {
-                if (!saved && sheetContext.mounted) {
-                  setSheetState(() => saving = false);
-                }
-              }
-            }
+    String? errorText;
+    var saved = false;
+    var appliedDeferredRemoteUpdate = false;
+    controller.pauseLiveFamilyUpdates();
+    try {
+      saved =
+          await showModalBottomSheet<bool>(
+            context: context,
+            isScrollControlled: true,
+            showDragHandle: true,
+            useRootNavigator: true,
+            builder: (sheetContext) {
+              return StatefulBuilder(
+                builder: (context, setSheetState) {
+                  Future<void> save() async {
+                    if (saving) return;
+                    setSheetState(() {
+                      saving = true;
+                      errorText = null;
+                    });
+                    try {
+                      await controller.updateFamilyInvitePermissions(
+                        inviteId: invite.id,
+                        displayName: nameController.text,
+                        roleLabel: roleLabel,
+                        permissions: selected.toList(),
+                        refreshSnapshot: false,
+                      );
+                      if (sheetContext.mounted) {
+                        FocusScope.of(sheetContext).unfocus();
+                        Navigator.of(sheetContext).pop(true);
+                      }
+                    } catch (error) {
+                      if (!context.mounted || !sheetContext.mounted) return;
+                      setSheetState(() {
+                        saving = false;
+                        errorText = userFacingErrorMessage(error);
+                      });
+                    }
+                  }
 
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  8,
-                  20,
-                  MediaQuery.viewInsetsOf(context).bottom + 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        invite.invitedEmail,
-                        style: const TextStyle(
-                          color: AppColors.muted,
-                          fontWeight: FontWeight.w700,
-                        ),
+                  return SafeArea(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        8,
+                        20,
+                        MediaQuery.viewInsetsOf(context).bottom + 20,
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Kişi Yetkileri',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Görünen ad / özel rol adı',
-                          prefixIcon: Icon(Icons.badge_outlined),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        initialValue: roleLabel,
-                        decoration: const InputDecoration(labelText: 'Rol'),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'Ebeveyn',
-                            child: Text('Ebeveyn'),
-                          ),
-                          DropdownMenuItem(value: 'Anne', child: Text('Anne')),
-                          DropdownMenuItem(value: 'Baba', child: Text('Baba')),
-                          DropdownMenuItem(
-                            value: 'Bakıcı',
-                            child: Text('Bakıcı'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Aile Üyesi',
-                            child: Text('Aile Üyesi'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Doktor',
-                            child: Text('Doktor'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Görüntüleyici',
-                            child: Text('Sadece görüntüleme'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setSheetState(() {
-                            roleLabel = value;
-                            selected = FamilyPermissionSets.defaultsForRole(
-                              value,
-                            ).toSet();
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      _PermissionPicker(
-                        selected: selected,
-                        onChanged: (next) =>
-                            setSheetState(() => selected = next),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: saving
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              invite.invitedEmail,
+                              style: const TextStyle(
+                                color: AppColors.muted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Kişi Yetkileri',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              controller: nameController,
+                              enabled: !saving,
+                              decoration: const InputDecoration(
+                                labelText: 'Görünen ad / özel rol adı',
+                                prefixIcon: Icon(Icons.badge_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            DropdownButtonFormField<String>(
+                              initialValue: roleLabel,
+                              decoration: const InputDecoration(
+                                labelText: 'Rol',
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'Ebeveyn',
+                                  child: Text('Ebeveyn'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Anne',
+                                  child: Text('Anne'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Baba',
+                                  child: Text('Baba'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Bakıcı',
+                                  child: Text('Bakıcı'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Aile Üyesi',
+                                  child: Text('Aile Üyesi'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Doktor',
+                                  child: Text('Doktor'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'Görüntüleyici',
+                                  child: Text('Sadece görüntüleme'),
+                                ),
+                              ],
+                              onChanged: saving
                                   ? null
-                                  : () => Navigator.pop(sheetContext),
-                              child: const Text('Vazgeç'),
+                                  : (value) {
+                                      if (value == null) return;
+                                      setSheetState(() {
+                                        roleLabel = value;
+                                        selected =
+                                            FamilyPermissionSets.defaultsForRole(
+                                              value,
+                                            ).toSet();
+                                      });
+                                    },
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: saving ? null : save,
-                              child: Text(saving ? 'KAYDEDİLİYOR' : 'KAYDET'),
+                            const SizedBox(height: 12),
+                            _PermissionPicker(
+                              selected: selected,
+                              enabled: !saving,
+                              onChanged: (next) =>
+                                  setSheetState(() => selected = next),
                             ),
-                          ),
-                        ],
+                            if (errorText != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                errorText!,
+                                style: const TextStyle(
+                                  color: AppColors.danger,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: saving
+                                        ? null
+                                        : () => Navigator.pop(
+                                            sheetContext,
+                                            false,
+                                          ),
+                                    child: const Text('Vazgeç'),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: FilledButton(
+                                    onPressed: saving ? null : save,
+                                    child: Text(
+                                      saving ? 'KAYDEDİLİYOR' : 'KAYDET',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-    nameController.dispose();
+                    ),
+                  );
+                },
+              );
+            },
+          ) ??
+          false;
+    } finally {
+      nameController.dispose();
+      await WidgetsBinding.instance.endOfFrame;
+      appliedDeferredRemoteUpdate = await controller.resumeLiveFamilyUpdates(
+        applyDeferred: !saved,
+      );
+    }
+    if (!mounted || !saved) return;
+    if (!appliedDeferredRemoteUpdate) {
+      await WidgetsBinding.instance.endOfFrame;
+      await controller.refreshSnapshotAfterMutation(syncLiveFamily: false);
+    }
+    if (mounted) {
+      showAppSnack(context, 'Yetkiler güncellendi.');
+    }
   }
 
   Future<void> _confirmRemoveMember(FamilyInvite invite) async {
@@ -704,10 +750,15 @@ class _InviteActions extends StatelessWidget {
 }
 
 class _PermissionPicker extends StatelessWidget {
-  const _PermissionPicker({required this.selected, required this.onChanged});
+  const _PermissionPicker({
+    required this.selected,
+    required this.onChanged,
+    this.enabled = true,
+  });
 
   final Set<FamilyPermission> selected;
   final ValueChanged<Set<FamilyPermission>> onChanged;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -785,15 +836,17 @@ class _PermissionPicker extends StatelessWidget {
                 FilterChip(
                   selected: selected.contains(permission),
                   label: Text(_label(permission)),
-                  onSelected: (value) {
-                    final next = {...selected};
-                    if (value) {
-                      next.add(permission);
-                    } else {
-                      next.remove(permission);
-                    }
-                    onChanged(next);
-                  },
+                  onSelected: enabled
+                      ? (value) {
+                          final next = {...selected};
+                          if (value) {
+                            next.add(permission);
+                          } else {
+                            next.remove(permission);
+                          }
+                          onChanged(next);
+                        }
+                      : null,
                 ),
             ],
           ),

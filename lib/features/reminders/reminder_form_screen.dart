@@ -31,6 +31,7 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
   int _endHour = 22;
   bool _isActive = true;
   bool _saving = false;
+  bool _calendarBusy = false;
   ReminderItem? _editingReminder;
 
   @override
@@ -131,6 +132,9 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
   @override
   Widget build(BuildContext context) {
     final snapshot = ref.watch(appSnapshotProvider);
+    final calendarSyncEnabled = ref
+        .watch(appControllerProvider)
+        .deviceCalendarSyncEnabled;
     final categories = _categories(snapshot.mode);
     return Scaffold(
       appBar: AppBar(
@@ -190,6 +194,29 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
               ),
               value: _isActive,
               onChanged: (value) => setState(() => _isActive = value),
+            ),
+          ),
+          const SizedBox(height: 16),
+          AppCard(
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: _calendarBusy
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.calendar_month_outlined),
+              title: const Text('Telefon takvimine ekle'),
+              subtitle: Text(
+                calendarSyncEnabled
+                    ? 'Bu cihazdaki aktif planlar telefon takviminde de güncel tutulur.'
+                    : 'Açınca takvim izni istenir; planlar takvim etkinliği olarak yazılır.',
+              ),
+              value: calendarSyncEnabled,
+              onChanged: _calendarBusy || _saving
+                  ? null
+                  : _setDeviceCalendarSyncEnabled,
             ),
           ),
           const SizedBox(height: 16),
@@ -383,6 +410,27 @@ class _ReminderFormScreenState extends ConsumerState<ReminderFormScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _setDeviceCalendarSyncEnabled(bool enabled) async {
+    if (_calendarBusy) return;
+    setState(() => _calendarBusy = true);
+    try {
+      await ref
+          .read(appControllerProvider)
+          .setDeviceCalendarSyncEnabled(enabled);
+      if (!mounted) return;
+      showAppSnack(
+        context,
+        enabled
+            ? 'Telefon takvimi eşitlemesi açıldı.'
+            : 'Telefon takvimi eşitlemesi kapatıldı.',
+      );
+    } catch (error) {
+      if (mounted) showAppSnack(context, userFacingErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _calendarBusy = false);
+    }
   }
 
   void _setPlanType(ReminderPlanType type) => setState(() => _planType = type);

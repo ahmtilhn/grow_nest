@@ -44,6 +44,34 @@ void main() {
     expect(find.text('en'), findsOneWidget);
   });
 
+  testWidgets('controller revision rebuilds on time-only notifications', (
+    tester,
+  ) async {
+    final controller = await _controller();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: [appControllerProvider.overrideWith((ref) => controller)],
+        child: Consumer(
+          builder: (context, ref, _) {
+            final revision = ref.watch(appControllerRevisionProvider);
+            return Directionality(
+              textDirection: TextDirection.ltr,
+              child: Text('revision:$revision'),
+            );
+          },
+        ),
+      ),
+    );
+
+    expect(find.text('revision:0'), findsOneWidget);
+    controller.refreshTimeSensitiveViews();
+    await tester.pump();
+
+    expect(find.text('revision:1'), findsOneWidget);
+  });
+
   testWidgets('login and pregnancy onboarding opens figma-style dashboard', (
     tester,
   ) async {
