@@ -43,6 +43,7 @@ ThemeData buildAppTheme({Brightness brightness = Brightness.light}) {
   );
   return ThemeData(
     useMaterial3: true,
+    splashFactory: InkRipple.splashFactory,
     colorScheme: scheme,
     scaffoldBackgroundColor: isDark
         ? const Color(0xFF0C1524)

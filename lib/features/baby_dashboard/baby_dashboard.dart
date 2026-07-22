@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_controller.dart';
 import '../../app/theme/app_theme.dart';
+import '../../core/insights/care_insights.dart';
 import '../../core/utils/app_calculators.dart';
 import '../../core/widgets/baby_status_widget_service.dart';
 import '../../core/widgets/app_ui.dart';
@@ -18,33 +19,26 @@ class BabyDashboardScreen extends ConsumerWidget {
     ref.watch(appControllerRevisionProvider);
     final snapshot = ref.watch(appSnapshotProvider);
     final baby = snapshot.baby;
+    final insights = CareRecordInsights(records: snapshot.records);
     final name = baby?.name ?? 'Bebek profili';
     final age = baby == null
         ? 'Bilgiler tamamlanınca yaş görünür'
         : AgeUtils.babyAge(baby.birthDate, DateTime.now());
-    final feeding = _latest(snapshot.records, RecordType.feeding);
-    final diaper = _latest(snapshot.records, RecordType.diaper);
-    final sleep = _latest(snapshot.records, RecordType.sleep);
-    final health = _latest(snapshot.records, RecordType.health);
-    final growth = _latest(snapshot.records, RecordType.growth);
-    final measurement = GrowthMeasurement.parse(growth?.value);
+    final feeding = insights.latest(RecordType.feeding);
+    final diaper = insights.latest(RecordType.diaper);
+    final sleep = insights.latest(RecordType.sleep);
+    final health = insights.latest(RecordType.health);
+    final measurement = insights.latestGrowthMeasurement(baby);
     final ageMonths = baby == null
         ? 0
         : DateTime.now().difference(baby.birthDate).inDays ~/ 30;
-    final weight = measurement.weightKg ?? baby?.currentWeight;
-    final height = measurement.heightCm ?? baby?.currentHeight;
-    final head = measurement.headCm ?? baby?.currentHeadCircumference;
-    final sleepMinutes = _sleepMinutesLastDay(snapshot.records);
-    final feedingCount = snapshot.records
-        .where((record) => record.type == RecordType.feeding)
-        .length;
-    final diaperCount = snapshot.records
-        .where((record) => record.type == RecordType.diaper)
-        .length;
-    final nextVaccine = snapshot.vaccines
-        .where((item) => item.status != VaccineStatus.completed)
-        .cast<VaccineEvent?>()
-        .firstWhere((item) => item != null, orElse: () => null);
+    final weight = measurement.weightKg;
+    final height = measurement.heightCm;
+    final head = measurement.headCm;
+    final sleepMinutes = insights.sleepMinutesLast24Hours();
+    final feedingCount = insights.countToday(RecordType.feeding);
+    final diaperCount = insights.countToday(RecordType.diaper);
+    final nextVaccine = insights.nextVaccine(snapshot.vaccines);
     return AppScreen(
       bottomPadding: 120,
       children: [
@@ -84,6 +78,11 @@ class BabyDashboardScreen extends ConsumerWidget {
                     sleepMinutes: sleepMinutes,
                   ),
                 ),
+              ),
+              IconButton(
+                tooltip: 'Detaylı bakım özeti',
+                onPressed: () => context.push('/insights'),
+                icon: const Icon(Icons.arrow_forward_rounded),
               ),
             ],
           ),
@@ -257,30 +256,10 @@ class BabyDashboardScreen extends ConsumerWidget {
     );
   }
 
-  TrackerRecord? _latest(List<TrackerRecord> records, RecordType type) {
-    final filtered = records.where((record) => record.type == type);
-    return filtered.isEmpty ? null : filtered.first;
-  }
-
   String _timeAgo(DateTime time) {
     final minutes = DateTime.now().difference(time).inMinutes.clamp(0, 9999);
     if (minutes < 60) return '$minutes dk önce';
     return '${minutes ~/ 60}:${(minutes % 60).toString().padLeft(2, '0')}';
-  }
-
-  int _sleepMinutesLastDay(List<TrackerRecord> records) {
-    final since = DateTime.now().subtract(const Duration(hours: 24));
-    var total = 0;
-    for (final record in records) {
-      if (record.type != RecordType.sleep ||
-          record.occurredAt.isBefore(since)) {
-        continue;
-      }
-      final value = record.value ?? '';
-      final match = RegExp(r'(\d+)\s*dk').firstMatch(value);
-      if (match != null) total += int.parse(match.group(1)!);
-    }
-    return total;
   }
 
   String _dailySummaryText({

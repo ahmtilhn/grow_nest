@@ -33,16 +33,25 @@ class HomeShell extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              context.l10n.t('appName'),
-              style: const TextStyle(
-                color: AppColors.brand,
-                fontWeight: FontWeight.w900,
+            Flexible(
+              child: Text(
+                context.l10n.t('appName'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.brand,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Bakım özeti',
+            onPressed: () => context.push('/insights'),
+            icon: const Icon(Icons.insights_outlined),
+          ),
           IconButton(
             tooltip: 'Bildirimler',
             onPressed: () => context.push('/notifications'),

@@ -1,12 +1,92 @@
 const admin = require("firebase-admin");
 const { setGlobalOptions } = require("firebase-functions/v2");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { HttpsError, onCall } = require("firebase-functions/v2/https");
 
 admin.initializeApp();
 setGlobalOptions({ region: "europe-west4", maxInstances: 2 });
 
 const db = admin.firestore();
 const messaging = admin.messaging();
+
+exports.createFamilyInvite = onCall(async (request) => {
+  const caller = requireVerifiedCallableUser(request);
+  const familyId = cleanRequiredValue(request.data && request.data.familyId, 120, "familyId");
+  const familyOwnerUserId = cleanRequiredValue(
+    request.data && request.data.familyOwnerUserId,
+    128,
+    "familyOwnerUserId",
+  );
+  const invitedEmail = normalizeEmail(request.data && request.data.email);
+  if (!invitedEmail) {
+    throw new HttpsError("invalid-argument", "Geçerli bir e-posta girin.");
+  }
+  if (normalizeEmail(caller.email) === invitedEmail) {
+    throw new HttpsError("invalid-argument", "Kendi hesabınıza davet gönderemezsiniz.");
+  }
+
+  const invitedUser = await authUserByEmail(invitedEmail);
+  if (!invitedUser) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Bu e-posta ile kayıtlı bir kullanıcı yok. Önce uygulamaya kayıt olmalı.",
+    );
+  }
+
+  const familyData = await requireCanInviteToFamily({
+    familyId,
+    callerUid: caller.uid,
+    callerEmail: normalizeEmail(caller.email),
+  });
+  await assertUserIsNotInAnotherFamily({
+    targetUid: invitedUser.uid,
+    targetEmail: invitedEmail,
+    requestedFamilyId: familyId,
+  });
+
+  const invitedByName = cleanOptionalValue(request.data && request.data.invitedByName, 80) ||
+    caller.name ||
+    caller.email ||
+    "MiniAdımlar";
+  const roleLabel = cleanOptionalValue(request.data && request.data.roleLabel, 60) || "Ebeveyn";
+  const invitedDisplayName = cleanOptionalValue(request.data && request.data.invitedDisplayName, 80) || roleLabel;
+  const permissions = normalizePermissions(request.data && request.data.permissions, roleLabel);
+  const inviteId = `invite-${familyId}-${invitedEmail}`;
+  const inviteRef = db.collection("familyInvites").doc(inviteId);
+  const currentInvite = await inviteRef.get();
+  if (currentInvite.exists) {
+    const data = currentInvite.data() || {};
+    if (data.status === "accepted") {
+      throw new HttpsError("failed-precondition", "Bu kullanıcı zaten bu aileye eklenmiş.");
+    }
+    if (data.status === "pending") {
+      throw new HttpsError("failed-precondition", "Bu kullanıcı için bekleyen bir davet zaten var.");
+    }
+  }
+
+  const updatePayload = {
+    invitedByName,
+    invitedDisplayName,
+    roleLabel,
+    permissions,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+  await inviteRef.set({
+    id: inviteId,
+    familyId,
+    invitedEmail,
+    invitedByUserId: caller.uid,
+    familyOwnerUserId: familyData.ownerUserId || familyOwnerUserId,
+    status: "pending",
+    acceptedUserId: admin.firestore.FieldValue.delete(),
+    respondedAt: admin.firestore.FieldValue.delete(),
+    createdAt: currentInvite.exists
+      ? currentInvite.data().createdAt || admin.firestore.FieldValue.serverTimestamp()
+      : admin.firestore.FieldValue.serverTimestamp(),
+    ...updatePayload,
+  }, { merge: true });
+  return { id: inviteId, invitedUserId: invitedUser.uid };
+});
 
 exports.notifyOnFamilyInviteCreated = onDocumentCreated("familyInvites/{inviteId}", async (event) => {
   const invite = event.data && event.data.data();
@@ -165,11 +245,155 @@ async function notifyFamily({ familyId, actorId, visibilityPermission, type, tit
   });
 }
 
+function requireVerifiedCallableUser(request) {
+  if (!request.auth || !request.auth.uid) {
+    throw new HttpsError("unauthenticated", "Oturum açmanız gerekiyor.");
+  }
+  if (request.auth.token.email_verified !== true) {
+    throw new HttpsError("permission-denied", "E-posta doğrulaması gerekiyor.");
+  }
+  return {
+    uid: request.auth.uid,
+    email: request.auth.token.email || "",
+    name: cleanOptionalValue(request.auth.token.name, 80),
+  };
+}
+
+function cleanText(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function cleanRequiredValue(value, maxLength, field) {
+  const text = cleanText(value);
+  if (!text || text.length > maxLength) {
+    throw new HttpsError("invalid-argument", `${field} geçersiz.`);
+  }
+  return text;
+}
+
+function cleanOptionalValue(value, maxLength) {
+  if (value === undefined || value === null) return null;
+  const text = cleanText(value);
+  if (!text) return null;
+  if (text.length > maxLength) {
+    throw new HttpsError("invalid-argument", "Metin çok uzun.");
+  }
+  return text;
+}
+
+async function authUserByEmail(email) {
+  try {
+    return await admin.auth().getUserByEmail(email);
+  } catch (error) {
+    if (error && error.code === "auth/user-not-found") return null;
+    throw error;
+  }
+}
+
+async function requireCanInviteToFamily({ familyId, callerUid, callerEmail }) {
+  const family = await db.collection("families").doc(familyId).get();
+  if (!family.exists) {
+    throw new HttpsError("failed-precondition", "Aile hesabı bulunamadı.");
+  }
+  const familyData = family.data() || {};
+  if (familyData.ownerUserId === callerUid) return familyData;
+  const invite = await db.collection("familyInvites")
+    .where("familyId", "==", familyId)
+    .where("status", "==", "accepted")
+    .where("invitedEmail", "==", callerEmail)
+    .limit(1)
+    .get();
+  if (!invite.empty) {
+    const permissions = Array.isArray(invite.docs[0].data().permissions)
+      ? invite.docs[0].data().permissions
+      : [];
+    if (permissions.includes("inviteUsers")) return familyData;
+  }
+  throw new HttpsError("permission-denied", "Bu aileye davet gönderme yetkiniz yok.");
+}
+
+async function assertUserIsNotInAnotherFamily({ targetUid, targetEmail, requestedFamilyId }) {
+  const checks = await Promise.all([
+    db.collection("families").where("ownerUserId", "==", targetUid).limit(1).get(),
+    db.collection("families").where("partnerUserIds", "array-contains", targetUid).limit(1).get(),
+    db.collection("families").where("partnerUserIds", "array-contains", targetEmail).limit(1).get(),
+    db.collection("familyInvites")
+      .where("acceptedUserId", "==", targetUid)
+      .where("status", "==", "accepted")
+      .limit(1)
+      .get(),
+    db.collection("familyInvites")
+      .where("invitedEmail", "==", targetEmail)
+      .where("status", "==", "accepted")
+      .limit(1)
+      .get(),
+  ]);
+  for (const snapshot of checks) {
+    if (snapshot.empty) continue;
+    const data = snapshot.docs[0].data() || {};
+    const familyId = data.familyId || snapshot.docs[0].id;
+    if (familyId === requestedFamilyId) {
+      throw new HttpsError("failed-precondition", "Bu kullanıcı zaten bu aileye eklenmiş.");
+    }
+    throw new HttpsError(
+      "failed-precondition",
+      "Bu kullanıcı zaten başka bir aileye bağlı. Bir hesap yalnızca bir aileye eklenebilir.",
+    );
+  }
+}
+
+function normalizePermissions(value, roleLabel) {
+  const allowed = new Set([
+    "viewBaby", "viewFeeding", "viewDiaper", "viewSleep", "viewVaccines",
+    "viewAppointments", "viewMemories", "viewNotifications", "viewStats",
+    "addFeeding", "addDiaper", "manageSleep", "addGrowth", "addVaccine",
+    "addAppointment", "addMemory", "saveArticle", "editRecords",
+    "deleteRecords", "inviteUsers", "manageUserPermissions", "removeUsers",
+    "editFamily", "editBaby", "deleteFamilyData",
+  ]);
+  const requested = Array.isArray(value)
+    ? value.map((item) => String(item)).filter((item) => allowed.has(item))
+    : [];
+  if (requested.length > 0) return [...new Set(requested)].slice(0, 25);
+  const normalizedRole = cleanText(roleLabel).toLocaleLowerCase("tr-TR");
+  if (["bakıcı", "bakici", "caregiver"].includes(normalizedRole)) {
+    return [
+      "viewBaby", "viewFeeding", "viewDiaper", "viewSleep", "viewAppointments",
+      "viewMemories", "viewNotifications", "addFeeding", "addDiaper",
+      "manageSleep", "addAppointment", "addMemory",
+    ];
+  }
+  if (["görüntüleyici", "goruntuleyici", "doktor", "view", "viewer"].includes(normalizedRole)) {
+    return [
+      "viewBaby", "viewFeeding", "viewDiaper", "viewSleep", "viewVaccines",
+      "viewAppointments", "viewMemories", "viewNotifications", "viewStats",
+    ];
+  }
+  return [
+    "viewBaby", "viewFeeding", "viewDiaper", "viewSleep", "viewVaccines",
+    "viewAppointments", "viewMemories", "viewNotifications", "viewStats",
+    "addFeeding", "addDiaper", "manageSleep", "addGrowth", "addVaccine",
+    "addAppointment", "addMemory", "saveArticle", "editRecords",
+    "deleteRecords", "inviteUsers", "editBaby",
+  ];
+}
+
 async function notificationTargetsForFamily(familyId, actorId, visibilityPermission) {
   const family = await db.collection("families").doc(familyId).get();
   if (!family.exists) return [];
   const familyData = family.data() || {};
   const ownerId = familyData.ownerUserId;
+  const usersByEmailCache = new Map();
+  const cachedUsersByEmail = async (email) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return [];
+    if (!usersByEmailCache.has(normalized)) {
+      usersByEmailCache.set(normalized, await usersByEmail(normalized));
+    }
+    return usersByEmailCache.get(normalized);
+  };
   const accepted = await db.collection("familyInvites")
     .where("familyId", "==", familyId)
     .where("status", "==", "accepted")
@@ -187,8 +411,10 @@ async function notificationTargetsForFamily(familyId, actorId, visibilityPermiss
     }
     const invitedEmail = normalizeEmail(data.invitedEmail);
     if (invitedEmail) eligibleAcceptedEmails.add(invitedEmail);
-    const currentUsers = await usersByEmail(invitedEmail);
-    currentUsers.forEach((user) => targetUserIds.add(user.id));
+    if (!data.acceptedUserId) {
+      const currentUsers = await cachedUsersByEmail(invitedEmail);
+      currentUsers.forEach((user) => targetUserIds.add(user.id));
+    }
   }
   const canUsePartnerUidFallback = accepted.docs.length > 0 && eligibleAcceptedCount === accepted.docs.length;
   const partnerUserIds = Array.isArray(familyData.partnerUserIds) ? familyData.partnerUserIds : [];
@@ -198,7 +424,7 @@ async function notificationTargetsForFamily(familyId, actorId, visibilityPermiss
     if (partnerKey.includes("@")) {
       const partnerEmail = normalizeEmail(partnerKey);
       if (!eligibleAcceptedEmails.has(partnerEmail)) continue;
-      const currentUsers = await usersByEmail(partnerEmail);
+      const currentUsers = await cachedUsersByEmail(partnerEmail);
       currentUsers.forEach((user) => targetUserIds.add(user.id));
     } else if (canUsePartnerUidFallback) {
       targetUserIds.add(partnerKey);

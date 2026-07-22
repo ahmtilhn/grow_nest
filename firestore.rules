@@ -134,7 +134,34 @@ service cloud.firestore {
 
     function validPermissionList(value) {
       return value is list &&
-        value.size() <= 25;
+        value.size() <= 25 &&
+        value.hasOnly([
+          'viewBaby',
+          'viewFeeding',
+          'viewDiaper',
+          'viewSleep',
+          'viewVaccines',
+          'viewAppointments',
+          'viewMemories',
+          'viewNotifications',
+          'viewStats',
+          'addFeeding',
+          'addDiaper',
+          'manageSleep',
+          'addGrowth',
+          'addVaccine',
+          'addAppointment',
+          'addMemory',
+          'saveArticle',
+          'editRecords',
+          'deleteRecords',
+          'inviteUsers',
+          'manageUserPermissions',
+          'removeUsers',
+          'editFamily',
+          'editBaby',
+          'deleteFamilyData'
+        ]);
     }
 
     function inviteId(familyId, email) {
@@ -239,6 +266,7 @@ service cloud.firestore {
     function canReadInviteNotification(data) {
       return data.type == 'family_invite' &&
         data.payload is string &&
+        authEmailVerified() &&
         exists(invitePath(data.payload)) &&
         get(invitePath(data.payload)).data.familyId == data.familyId &&
         get(invitePath(data.payload)).data.invitedEmail == authEmail() &&
@@ -291,7 +319,7 @@ service cloud.firestore {
         data.id == userId &&
         data.email == authEmail() &&
         validString(data, 'displayName', 1, 80) &&
-        data.emailVerified is bool &&
+        data.emailVerified == authEmailVerified() &&
         validOptionalString(data, 'avatarUrl', 500) &&
         validOptionalTimestamp(data, 'birthDate') &&
         validOptionalString(data, 'phone', 40) &&
@@ -507,17 +535,6 @@ service cloud.firestore {
         validOptionalTimestamp(data, 'respondedAt');
     }
 
-    function validNewInvite(data, inviteDocId) {
-      return validInvite(data, inviteDocId) &&
-        data.status == 'pending' &&
-        data.invitedByUserId == request.auth.uid &&
-        exists(familyPath(data.familyId)) &&
-        data.familyOwnerUserId == get(familyPath(data.familyId)).data.ownerUserId &&
-        canUsePermission(data.familyId, 'inviteUsers') &&
-        !hasField(data, 'acceptedUserId') &&
-        !hasField(data, 'respondedAt');
-    }
-
     function inviteIdentityUnchanged(inviteDocId) {
       return request.resource.data.id == resource.data.id &&
         request.resource.data.id == inviteDocId &&
@@ -569,7 +586,8 @@ service cloud.firestore {
           'status', 'acceptedUserId', 'respondedAt', 'updatedAt'
         ]) &&
         resource.data.id == inviteDocId &&
-        request.auth.token.email == resource.data.invitedEmail &&
+        authEmailVerified() &&
+        authEmail() == resource.data.invitedEmail &&
         resource.data.status == 'pending' &&
         request.resource.data.updatedAt is timestamp &&
         (
@@ -805,8 +823,7 @@ service cloud.firestore {
           isFamilyOwner(resource.data.familyId) ||
           canUsePermission(resource.data.familyId, 'inviteUsers') ||
           canUsePermission(resource.data.familyId, 'manageUserPermissions'));
-      allow create: if signedIn() &&
-        validNewInvite(request.resource.data, inviteDocId);
+      allow create: if false;
       allow update: if signedIn() &&
         (
           validInvitePermissionUpdate(inviteDocId) ||
@@ -833,6 +850,12 @@ service cloud.firestore {
           .hasOnly(['readBy', 'seenBy', 'updatedAt']) &&
         request.resource.data.readBy.hasAll(resource.data.readBy) &&
         request.resource.data.seenBy.hasAll(resource.data.seenBy) &&
+        request.resource.data.readBy.toSet()
+          .difference(resource.data.readBy.toSet())
+          .hasOnly([request.auth.uid]) &&
+        request.resource.data.seenBy.toSet()
+          .difference(resource.data.seenBy.toSet())
+          .hasOnly([request.auth.uid]) &&
         request.resource.data.readBy.hasAny([request.auth.uid]) &&
         request.resource.data.seenBy.hasAny([request.auth.uid]);
       allow delete: if false;
@@ -856,6 +879,19 @@ service cloud.firestore {
           .hasOnly(['readBy', 'seenBy', 'isReadBy', 'updatedAt']) &&
         request.resource.data.readBy.hasAll(resource.data.readBy) &&
         request.resource.data.seenBy.hasAll(resource.data.seenBy) &&
+        request.resource.data.readBy.toSet()
+          .difference(resource.data.readBy.toSet())
+          .hasOnly([request.auth.uid]) &&
+        request.resource.data.seenBy.toSet()
+          .difference(resource.data.seenBy.toSet())
+          .hasOnly([request.auth.uid]) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isReadBy']) ||
+          (
+            resource.data.isReadBy is map &&
+            request.resource.data.isReadBy.diff(resource.data.isReadBy)
+              .affectedKeys().hasOnly([request.auth.uid]) &&
+            request.resource.data.isReadBy[request.auth.uid] == true
+          )) &&
         request.resource.data.readBy.hasAny([request.auth.uid]) &&
         request.resource.data.seenBy.hasAny([request.auth.uid]);
       allow delete: if false;

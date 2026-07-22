@@ -3,6 +3,14 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    configurations.configureEach {
+        resolutionStrategy {
+            // home_widget declares Glance as 1.+; pin it to a stable version
+            // compatible with the current Flutter/Android Gradle Plugin stack.
+            force("androidx.glance:glance-appwidget:1.1.1")
+        }
+    }
 }
 
 val newBuildDir: Directory =

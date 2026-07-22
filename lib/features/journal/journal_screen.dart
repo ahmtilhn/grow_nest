@@ -272,15 +272,17 @@ class _GalleryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    return Material(
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(12),
-      child: ClipRRect(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
-            Image.asset(
-              image,
+            Ink.image(
+              image: AssetImage(image),
               height: height,
               width: double.infinity,
               fit: BoxFit.cover,

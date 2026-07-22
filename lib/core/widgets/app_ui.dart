@@ -49,7 +49,7 @@ class AppCard extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: Material(type: MaterialType.transparency, child: child),
     );
     if (onTap == null) return content;
     return Material(
@@ -343,6 +343,14 @@ String userFacingErrorMessage(Object error) {
   }
   if (lower.contains('popup-closed') || lower.contains('canceled')) {
     return 'İşlem tamamlanmadı. Hazır olduğunuzda tekrar deneyebilirsiniz.';
+  }
+  for (final message in const [
+    'Bu e-posta ile kayıtlı bir kullanıcı yok. Önce uygulamaya kayıt olmalı.',
+    'Bu kullanıcı zaten başka bir aileye bağlı. Bir hesap yalnızca bir aileye eklenebilir.',
+    'Bu kullanıcı zaten bu aileye eklenmiş.',
+    'Bu kullanıcı için bekleyen bir davet zaten var.',
+  ]) {
+    if (raw.contains(message)) return message;
   }
   if (raw.startsWith('Invalid argument(s): ')) {
     return raw.replaceFirst('Invalid argument(s): ', '');

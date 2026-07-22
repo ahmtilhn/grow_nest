@@ -725,6 +725,13 @@ class AppController extends ChangeNotifier {
   Future<void> acceptFamilyInvite(String inviteId) async {
     _requireVerifiedAccount();
     final invite = _inviteById(inviteId);
+    if (invite != null &&
+        snapshot.family != null &&
+        snapshot.family!.id != invite.familyId) {
+      throw const AppControllerException(
+        'Bu hesap zaten başka bir aileye bağlı. Bir hesap yalnızca bir aileye eklenebilir.',
+      );
+    }
     if (remoteSync.isEnabled) {
       if (invite == null) {
         throw const AppControllerException('Davet bulunamadı.');
@@ -1032,6 +1039,10 @@ class AppController extends ChangeNotifier {
     try {
       final families = await remoteSync.fetchMyFamilies();
       for (final family in families) {
+        final currentFamily = snapshot.family;
+        if (currentFamily != null && currentFamily.id != family.id) {
+          continue;
+        }
         final createdNotifications = await _repository.upsertRemoteFamily(
           family,
         );
@@ -1082,6 +1093,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> _applyRemoteFamily(RemoteFamilySummary family) async {
     if (_applyingRemoteFamily) return;
+    if (snapshot.family != null && snapshot.family!.id != family.id) return;
     _applyingRemoteFamily = true;
     try {
       final createdNotifications = await _repository.upsertRemoteFamily(family);

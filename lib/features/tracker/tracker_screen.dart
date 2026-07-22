@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_controller.dart';
 import '../../app/theme/app_theme.dart';
+import '../../core/insights/care_insights.dart';
 import '../../core/widgets/app_ui.dart';
 import '../../domain/entities/app_entities.dart';
 
@@ -28,8 +29,9 @@ class _TrackerScreenState extends ConsumerState<TrackerScreen> {
   Widget build(BuildContext context) {
     final snapshot = ref.watch(appSnapshotProvider);
     final records = snapshot.records;
-    final latestHealth = _latest(records, RecordType.health);
-    final weeklyFeedingMl = _feedingTotalsLast7Days(records);
+    final insights = CareRecordInsights(records: records);
+    final latestHealth = insights.latest(RecordType.health);
+    final weeklyFeedingMl = insights.feedingTotalsLast7Days();
     final maxFeedingMl = _maxOrDefault(weeklyFeedingMl, 120);
     if (snapshot.mode == CareMode.pregnancy ||
         snapshot.mode == CareMode.planning) {
@@ -44,16 +46,20 @@ class _TrackerScreenState extends ConsumerState<TrackerScreen> {
         AppCard(
           color: const Color(0xFF6AAFC5),
           borderColor: const Color(0xFF6AAFC5),
-          onTap: () => context.push('/education'),
-          child: const Row(
+          onTap: () => context.push('/insights'),
+          child: Row(
             children: [
-              Expanded(
+              const Expanded(
                 child: Text(
-                  'KAYNAKLI REHBER\nBugün nasıl yardımcı olabiliriz?\nBebek gelişimi, beslenme ve güvenlik konularında kayıtlarınıza eşlik eden rehberleri açabilirsiniz.',
+                  'BAKIM ÖZETİ\nBugünün doğru sayımları, son 24 saat uykusu ve haftalık beslenme grafiği tek yerde.',
                   style: TextStyle(color: Colors.white, height: 1.45),
                 ),
               ),
-              Icon(Icons.bolt_rounded, color: Colors.white54, size: 76),
+              const Icon(
+                Icons.insights_rounded,
+                color: Colors.white54,
+                size: 76,
+              ),
             ],
           ),
         ),
@@ -62,7 +68,7 @@ class _TrackerScreenState extends ConsumerState<TrackerScreen> {
           children: [
             Expanded(
               child: _NutritionCard(
-                records: records,
+                insights: insights,
                 onTap: () => context.push('/add/${RecordType.feeding.name}'),
               ),
             ),
@@ -241,35 +247,6 @@ class _TrackerScreenState extends ConsumerState<TrackerScreen> {
     _ => Icons.edit_note_rounded,
   };
 
-  List<double> _feedingTotalsLast7Days(List<TrackerRecord> records) {
-    final now = DateTime.now();
-    final start = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(const Duration(days: 6));
-    final totals = List<double>.filled(7, 0);
-    for (final record in records) {
-      if (record.type != RecordType.feeding) continue;
-      final day = DateTime(
-        record.occurredAt.year,
-        record.occurredAt.month,
-        record.occurredAt.day,
-      );
-      final index = day.difference(start).inDays;
-      if (index < 0 || index >= totals.length) continue;
-      totals[index] += _mlFromValue(record.value);
-    }
-    return totals;
-  }
-
-  double _mlFromValue(String? value) {
-    if (value == null) return 0;
-    final match = RegExp(r'(\d+(?:[,.]\d+)?)').firstMatch(value);
-    if (match == null) return 0;
-    return double.tryParse(match.group(1)!.replaceAll(',', '.')) ?? 0;
-  }
-
   double _maxOrDefault(List<double> values, double fallback) {
     var max = 0.0;
     for (final value in values) {
@@ -281,11 +258,6 @@ class _TrackerScreenState extends ConsumerState<TrackerScreen> {
   String _dayLabel(int index) {
     final date = DateTime.now().subtract(Duration(days: 6 - index));
     return '${date.day}.${date.month}';
-  }
-
-  TrackerRecord? _latest(List<TrackerRecord> records, RecordType type) {
-    final filtered = records.where((record) => record.type == type);
-    return filtered.isEmpty ? null : filtered.first;
   }
 }
 
@@ -322,20 +294,15 @@ String _recordTime(DateTime time) {
 }
 
 class _NutritionCard extends StatelessWidget {
-  const _NutritionCard({required this.records, required this.onTap});
+  const _NutritionCard({required this.insights, required this.onTap});
 
-  final List<TrackerRecord> records;
+  final CareRecordInsights insights;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final feedingCount = records
-        .where((record) => record.type == RecordType.feeding)
-        .length;
-    final latest = records
-        .where((record) => record.type == RecordType.feeding)
-        .cast<TrackerRecord?>()
-        .firstWhere((record) => record != null, orElse: () => null);
+    final feedingCount = insights.countToday(RecordType.feeding);
+    final latest = insights.latest(RecordType.feeding);
     return AppCard(
       onTap: onTap,
       child: Column(
@@ -352,7 +319,9 @@ class _NutritionCard extends StatelessWidget {
           const SizedBox(height: 12),
           AppCard(
             color: AppColors.softBlue,
-            child: Text('Bugünkü kayıt\n$feedingCount kez'),
+            child: Text(
+              'Bugünkü kayıt\n$feedingCount kez / ${insights.totalMlToday(RecordType.feeding).round()} ml',
+            ),
           ),
         ],
       ),

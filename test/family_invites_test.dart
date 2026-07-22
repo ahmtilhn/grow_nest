@@ -544,7 +544,7 @@ void main() {
   );
 
   test(
-    'invitee with an existing local family switches to the shared family and writes into shared scope',
+    'invitee with an existing local family is not switched into another family',
     () async {
       final database = AppDatabase.inMemory();
       addTearDown(database.close);
@@ -585,9 +585,11 @@ void main() {
 
       await controller.refreshRemoteFamilies(force: true);
 
-      expect(controller.snapshot.family?.id, 'family-sender');
-      expect(controller.snapshot.baby?.id, 'baby-sender');
-      expect(controller.snapshot.baby?.name, 'Aylin');
+      expect(
+        controller.snapshot.family?.id,
+        'family-email-invitee-example-com',
+      );
+      expect(controller.snapshot.baby?.name, 'Kendi Bebeği');
 
       await controller.addRecord(
         type: RecordType.diaper,
@@ -596,8 +598,11 @@ void main() {
       );
 
       expect(remote.syncedRecords, isNotEmpty);
-      expect(remote.syncedRecords.last.familyId, 'family-sender');
-      expect(remote.syncedRecords.last.babyId, 'baby-sender');
+      expect(
+        remote.syncedRecords.last.familyId,
+        'family-email-invitee-example-com',
+      );
+      expect(remote.syncedRecords.last.babyId, isNot('baby-sender'));
     },
   );
 

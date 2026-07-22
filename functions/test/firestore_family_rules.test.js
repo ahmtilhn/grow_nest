@@ -16,6 +16,7 @@ const {
   setDoc,
   Timestamp,
   updateDoc,
+  where,
   writeBatch,
 } = require("firebase/firestore");
 
@@ -69,9 +70,13 @@ function inviteId(email) {
 }
 
 function auth(uid, email) {
+  return authWithEmailVerified(uid, email, true);
+}
+
+function authWithEmailVerified(uid, email, emailVerified) {
   return testEnv.authenticatedContext(uid, {
     email,
-    email_verified: true,
+    email_verified: emailVerified,
   });
 }
 
@@ -211,6 +216,26 @@ function userProfile({ uid, email, name }) {
   };
 }
 
+function notificationPayload({ id, targetUserIds = [managerUid, memberUid] }) {
+  return {
+    notificationId: id,
+    familyId,
+    targetUserIds,
+    createdBy: ownerUid,
+    type: "family_record",
+    category: "family",
+    title: "Family update",
+    body: "A shared family record changed.",
+    payload: "record-1",
+    readBy: [],
+    seenBy: [],
+    isReadBy: Object.fromEntries(targetUserIds.map((uid) => [uid, false])),
+    isDeleted: false,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
 function familyPayload() {
   return {
     id: familyId,
@@ -319,6 +344,14 @@ async function run() {
       doc(ownerDb, "users", ownerUid),
       userProfile({ uid: ownerUid, email: ownerEmail, name: "Owner Parent" }),
     ));
+    const unverifiedOwnerDb = authWithEmailVerified(ownerUid, ownerEmail, false).firestore();
+    await assertFails(setDoc(
+      doc(unverifiedOwnerDb, "users", ownerUid),
+      {
+        ...userProfile({ uid: ownerUid, email: ownerEmail, name: "Owner Parent" }),
+        emailVerified: true,
+      },
+    ));
     await assertSucceeds(setDoc(
       familyDoc(ownerDb),
       familyPayload(),
@@ -327,10 +360,16 @@ async function run() {
       doc(memberDb, "users", memberUid),
       userProfile({ uid: memberUid, email: memberEmail, name: "Family Member" }),
     ));
-    await assertSucceeds(setDoc(
+    await assertFails(setDoc(
       inviteDoc(ownerDb, memberEmail),
       pendingInvite({ email: memberEmail, permissions: ["viewBaby"] }),
     ));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        inviteDoc(context.firestore(), memberEmail),
+        pendingInvite({ email: memberEmail, permissions: ["viewBaby"] }),
+      );
+    });
     await assertSucceeds(acceptMemberBatch(memberDb, memberEmail, memberUid).commit());
     let family = await getDoc(familyDoc(memberDb));
     assert(family.data().partnerUserIds.includes(memberEmail));
@@ -357,6 +396,23 @@ async function run() {
     family = await getDoc(familyDoc(memberDb));
     assert(family.data().partnerUserIds.includes(memberEmail));
     assert(family.data().partnerUserIds.includes(memberUid));
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(inviteDoc(db, "unverified@example.com"), pendingInvite({
+        email: "unverified@example.com",
+        permissions: ["viewBaby"],
+      }));
+    });
+    const unverifiedInviteDb = authWithEmailVerified(
+      "unverified-uid",
+      "unverified@example.com",
+      false,
+    ).firestore();
+    await assertFails(acceptMemberBatch(
+      unverifiedInviteDb,
+      "unverified@example.com",
+      "unverified-uid",
+    ).commit());
 
     await testEnv.clearFirestore();
     await seedFamily();
@@ -392,6 +448,10 @@ async function run() {
       ...permissionUpdate(),
       permissions: [...allPermissions, "extraPermission"],
     }));
+    await assertFails(updateDoc(
+      inviteDoc(ownerDb, memberEmail),
+      permissionUpdate({ permissions: ["viewBaby", "unknownPermission"] }),
+    ));
 
     await assertSucceeds(removeMemberBatch(ownerDb, memberEmail, memberUid).commit());
     family = await getDoc(familyDoc(ownerDb));
@@ -450,6 +510,29 @@ async function run() {
       doc(managerDb, "reminders", "reminder-vaccine-allowed"),
       reminder({ id: "reminder-vaccine-allowed", category: "vaccine", uid: managerUid }),
     ));
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await setDoc(
+        doc(db, "notifications", "notification-safe-read"),
+        notificationPayload({ id: "notification-safe-read" }),
+      );
+      await setDoc(
+        doc(db, "notifications", "notification-forged-read"),
+        notificationPayload({ id: "notification-forged-read" }),
+      );
+    });
+    await assertSucceeds(updateDoc(doc(managerDb, "notifications", "notification-safe-read"), {
+      readBy: arrayUnion(managerUid),
+      seenBy: arrayUnion(managerUid),
+      updatedAt: Timestamp.now(),
+    }));
+    await assertFails(updateDoc(doc(managerDb, "notifications", "notification-forged-read"), {
+      readBy: arrayUnion(managerUid, memberUid),
+      seenBy: arrayUnion(managerUid, memberUid),
+      updatedAt: Timestamp.now(),
+    }));
+
   } finally {
     await testEnv.cleanup();
   }

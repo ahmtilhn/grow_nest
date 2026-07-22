@@ -203,7 +203,10 @@ class FirebaseAuthGateway implements AuthGateway {
 
   Future<void> _ensureGoogleInitialized() async {
     if (kIsWeb || _googleInitialized) return;
-    await GoogleSignIn.instance.initialize(clientId: _googleClientId);
+    await GoogleSignIn.instance.initialize(
+      clientId: _googleClientId,
+      serverClientId: _googleServerClientId,
+    );
     _googleInitialized = true;
   }
 
@@ -342,6 +345,14 @@ class FirebaseAuthGateway implements AuthGateway {
   String? get _googleClientId {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return DefaultFirebaseOptions.ios.iosClientId;
+    }
+    return null;
+  }
+
+  String? get _googleServerClientId {
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      return '496422631569-eah7mbhs2k1qkgdbufd7v56mr3jo2j9o.apps.googleusercontent.com';
     }
     return null;
   }

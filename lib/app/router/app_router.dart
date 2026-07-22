@@ -8,6 +8,7 @@ import '../../features/auth/register_screen.dart';
 import '../../features/education/education_screen.dart';
 import '../../features/education/article_detail_screen.dart';
 import '../../features/family/family_screen.dart';
+import '../../features/insights/care_insights_screen.dart';
 import '../../features/onboarding/onboarding_flow.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/quick_actions/quick_actions_screen.dart';
@@ -40,6 +41,7 @@ class AppRouteNames {
   static const notifications = 'notifications';
   static const articleDetail = 'article-detail';
   static const vaccines = 'vaccines';
+  static const insights = 'insights';
 }
 
 GoRouter buildAppRouter(AppController controller) {
@@ -200,6 +202,11 @@ GoRouter buildAppRouter(AppController controller) {
         path: '/quick-actions',
         name: AppRouteNames.quickActions,
         builder: (context, state) => const QuickActionsScreen(),
+      ),
+      GoRoute(
+        path: '/insights',
+        name: AppRouteNames.insights,
+        builder: (context, state) => const CareInsightsScreen(),
       ),
       GoRoute(
         path: '/profile',

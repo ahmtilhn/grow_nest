@@ -1,8 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grow_nest/core/ai/ai_analysis_service.dart';
+import 'package:grow_nest/core/insights/care_insights.dart';
 import 'package:grow_nest/core/notifications/notification_service.dart';
 import 'package:grow_nest/core/sync/sync_queue.dart';
 import 'package:grow_nest/core/utils/app_calculators.dart';
+import 'package:grow_nest/domain/entities/app_entities.dart';
 
 void main() {
   group('AgeUtils', () {
@@ -111,4 +113,83 @@ void main() {
       );
     });
   });
+
+  group('CareRecordInsights', () {
+    test('counts only today for daily feeding and diaper stats', () {
+      final now = DateTime(2026, 5, 4, 14);
+      final insights = CareRecordInsights(
+        now: now,
+        records: [
+          _record(
+            id: 'feeding-today',
+            type: RecordType.feeding,
+            value: '90 ml',
+            occurredAt: DateTime(2026, 5, 4, 9),
+          ),
+          _record(
+            id: 'feeding-yesterday',
+            type: RecordType.feeding,
+            value: '120 ml',
+            occurredAt: DateTime(2026, 5, 3, 21),
+          ),
+          _record(
+            id: 'diaper-today',
+            type: RecordType.diaper,
+            value: 'Islak',
+            occurredAt: DateTime(2026, 5, 4, 10),
+          ),
+        ],
+      );
+
+      expect(insights.countToday(RecordType.feeding), 1);
+      expect(insights.totalMlToday(RecordType.feeding), 90);
+      expect(insights.countToday(RecordType.diaper), 1);
+    });
+
+    test('builds seven day feeding totals by calendar day', () {
+      final insights = CareRecordInsights(
+        now: DateTime(2026, 5, 7, 18),
+        records: [
+          _record(
+            id: 'day-0',
+            type: RecordType.feeding,
+            value: '60 ml',
+            occurredAt: DateTime(2026, 5, 1, 8),
+          ),
+          _record(
+            id: 'today-a',
+            type: RecordType.feeding,
+            value: '90 ml',
+            occurredAt: DateTime(2026, 5, 7, 9),
+          ),
+          _record(
+            id: 'today-b',
+            type: RecordType.feeding,
+            value: '30 ml',
+            occurredAt: DateTime(2026, 5, 7, 11),
+          ),
+        ],
+      );
+
+      expect(insights.feedingTotalsLast7Days(), [60, 0, 0, 0, 0, 0, 120]);
+    });
+  });
+}
+
+TrackerRecord _record({
+  required String id,
+  required RecordType type,
+  required String value,
+  required DateTime occurredAt,
+}) {
+  return TrackerRecord(
+    id: id,
+    type: type,
+    title: id,
+    value: value,
+    occurredAt: occurredAt,
+    createdAt: occurredAt,
+    updatedAt: occurredAt,
+    syncStatus: SyncStatus.synced,
+  );
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart' as firestore;
+import 'package:cloud_functions/cloud_functions.dart' as functions;
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 
 import '../../domain/entities/app_entities.dart';
@@ -165,11 +166,16 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
   FirebaseFirestoreSyncService({
     firestore.FirebaseFirestore? firestoreInstance,
     firebase_auth.FirebaseAuth? auth,
+    functions.FirebaseFunctions? functionsInstance,
   }) : _firestore = firestoreInstance ?? firestore.FirebaseFirestore.instance,
-       _auth = auth ?? firebase_auth.FirebaseAuth.instance;
+       _auth = auth ?? firebase_auth.FirebaseAuth.instance,
+       _functions =
+           functionsInstance ??
+           functions.FirebaseFunctions.instanceFor(region: 'europe-west4');
 
   final firestore.FirebaseFirestore _firestore;
   final firebase_auth.FirebaseAuth _auth;
+  final functions.FirebaseFunctions _functions;
 
   @override
   bool get isEnabled => true;
@@ -427,35 +433,17 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
             .map((permission) => permission.name)
             .toSet()
             .toList();
-    final ref = _familyInvites.doc(_inviteId(familyId, normalized));
-    final updatePayload = <String, dynamic>{
+    await _functions.httpsCallable('createFamilyInvite').call({
+      'familyId': familyId,
+      'familyOwnerUserId': familyOwnerUserId,
+      'email': normalized,
+      'invitedEmail': normalized,
+      'invitedByUserId': firebaseUser.uid,
       'invitedByName': displayName,
       'invitedDisplayName': effectiveDisplayName,
       'roleLabel': effectiveRole,
       'permissions': effectivePermissions,
-      'updatedAt': firestore.FieldValue.serverTimestamp(),
-    };
-    final createPayload = <String, dynamic>{
-      'id': ref.id,
-      'familyId': familyId,
-      'invitedEmail': normalized,
-      'invitedByUserId': firebaseUser.uid,
-      ...updatePayload,
-      'familyOwnerUserId': familyOwnerUserId,
-      'status': 'pending',
-      'createdAt': firestore.FieldValue.serverTimestamp(),
-    };
-    final resendPayload = <String, dynamic>{
-      ...updatePayload,
-      'status': 'pending',
-      'acceptedUserId': firestore.FieldValue.delete(),
-      'respondedAt': firestore.FieldValue.delete(),
-    };
-    try {
-      await ref.update(resendPayload);
-    } catch (_) {
-      await ref.set(createPayload);
-    }
+    });
   }
 
   @override
@@ -1127,8 +1115,6 @@ class FirebaseFirestoreSyncService implements RemoteSyncService {
     }
     return user;
   }
-
-  String _inviteId(String familyId, String email) => 'invite-$familyId-$email';
 
   firestore.Timestamp? _timestampOrNull(DateTime? value) {
     return value == null ? null : firestore.Timestamp.fromDate(value);
